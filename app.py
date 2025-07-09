@@ -27,7 +27,12 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("Active Projects", f"{total_projects - complete_projects}")
 col2.metric("High-Score Risks (>6)", f"{high_risk_score_items}", delta=high_risk_score_items, delta_color="inverse")
 col3.metric("On-Time Completion %", f"{on_time_completion_rate:.1f}%", "Target: >90%")
-col4.metric("Avg. Project Duration", f"{(projects_df['Due Date'] - projects_df['Start Date']).mean().days} days")
+
+# --- THIS IS THE CORRECTED LINE ---
+# We first convert the Timedelta series to numeric days using .dt.days, then calculate the mean.
+avg_duration = (projects_df['Due Date'] - projects_df['Start Date']).dt.days.mean()
+col4.metric("Avg. Project Duration", f"{avg_duration:.1f} days")
+
 
 st.divider()
 
@@ -38,8 +43,13 @@ with col1:
     st.header("Project Portfolio Gantt Chart")
     st.caption("Visualizing the execution of design transfer activities for all projects.")
     fig = px.timeline(
-        projects_df, x_start="Start Date", x_end="Due Date", y="Project/Assay",
-        color="Current Phase", title="Project Timelines by Phase", hover_name="Project/Assay",
+        projects_df,
+        x_start="Start Date",
+        x_end="Due Date",
+        y="Project/Assay",
+        color="Current Phase",
+        title="Project Timelines by Phase",
+        hover_name="Project/Assay",
         hover_data=["Project Lead", "Overall Status"]
     )
     fig.update_yaxes(categoryorder="total ascending")
