@@ -50,12 +50,10 @@ with tab1:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
     
-    # We know shap_values is a list of 2 arrays for our binary classifier.
     # We explicitly select the SHAP values for class 1 (Failure) to match the data shape.
     # This directly resolves the AssertionError.
+    # We also use the robust pattern of letting SHAP create the plot and then capturing it.
     shap.summary_plot(shap_values[1], X, plot_type="bar", show=False)
-    
-    # We use the robust pattern of capturing the current figure and clearing it.
     st.pyplot(plt.gcf())
     plt.clf()
     # --- END OF FIX ---
