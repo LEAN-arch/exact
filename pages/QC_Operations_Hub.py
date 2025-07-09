@@ -52,7 +52,14 @@ with col1:
             'Out of Spec': 'red'
         }
     )
-    fig_schedule.add_vline(x=pd.Timestamp.now(), line_width=2, line_dash="dash", line_color="green", annotation_text="Now")
+
+    # --- DEFINITIVE FIX for TypeError ---
+    # Manually add the vertical line using add_shape and add_annotation
+    today = pd.Timestamp.now()
+    fig_schedule.add_shape(type="line", x0=today, y0=0, x1=today, y1=1, yref='paper', line=dict(color="Green", width=2, dash="dash"))
+    fig_schedule.add_annotation(x=today, y=1.05, yref='paper', text="Now", showarrow=False, font=dict(color="green"))
+    # --- END OF FIX ---
+    
     st.plotly_chart(fig_schedule, use_container_width=True)
 
 with col2:
