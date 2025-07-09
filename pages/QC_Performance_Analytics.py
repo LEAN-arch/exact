@@ -1,10 +1,13 @@
 # pages/QC_Performance_Analytics.py
+
 import streamlit as st
+import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from utils import generate_spc_data, generate_lot_data, detect_westgard_rules
-from scipy.stats import f_oneway
-from utils import calculate_cpk
+from plotly.subplots import make_subplots
+from utils import generate_spc_data, generate_lot_data, detect_westgard_rules, calculate_cpk
+from scipy.stats import f_oneway, norm
 
 st.set_page_config(page_title="QC Performance Analytics", layout="wide")
 st.title("📊 QC Performance & Analytics Dashboard")
@@ -21,6 +24,7 @@ with st.expander("🌐 Regulatory Context & Legend"):
 spc_df = generate_spc_data()
 lot_df = generate_lot_data()
 
+# --- SPC Section ---
 st.header("Statistical Process Control (SPC) with Westgard Rule Analysis")
 
 with st.expander("🔬 **The Experiment & Method**"):
@@ -74,6 +78,7 @@ with st.expander("📊 **Results & Analysis**"):
 
 st.divider()
 
+# --- Lot-to-Lot Section ---
 st.header("Reagent Lot-to-Lot Performance with Statistical Significance")
 
 with st.expander("🔬 **The Experiment & Method**"):
@@ -114,33 +119,93 @@ with col2:
             st.markdown("""
             **Conclusion & Action:** The new reagent lot performs equivalently to the reference lots. It passes the incoming acceptance criteria and can be released for use in production.
             """)
+
 st.divider()
+
+# --- Process Capability Section ---
 st.header("Process Capability Analysis (Cpk)")
 with st.expander("🔬 **The Method & Metrics**"):
     st.markdown("""
     #### The Method
-    **Process Capability** analysis determines how well a process, in a state of statistical control, is able to meet its specification limits. The **Process Capability Index (Cpk)** is a standard metric used to quantify this.
-    #### The Metric: Cpk
-    Cpk measures how close you are to your target and how consistent you are to around your average performance. A higher Cpk value indicates a more capable process (less likely to produce out-of-spec results).
-    - **Cpk > 1.33**: Generally considered capable for most processes.
-    - **1.0 < Cpk < 1.33**: Marginally capable; may require tighter control.
-    - **Cpk < 1.0**: Not capable; the process is producing defects.
+    **Process Capability** analysis determines how well a process, in a state of statistical control, is able to meet its specification limits. The **Process Capability Index (Cpk)** is a standard metric used to quantify this. The analysis is visualized by plotting the process distribution against the specification limits.
+    
+    #### The Metrics
+    - **Cpk**: Measures how close you are to your target and how consistent you are to around your average performance. It quantifies the "room" between your process distribution and the nearest specification limit. A higher Cpk value indicates a more capable process.
+        - **Cpk > 1.33**: Generally considered capable for most processes (often aligned with Six Sigma goals).
+        - **1.0 < Cpk < 1.33**: Marginally capable; may require tighter control.
+        - **Cpk < 1.0**: Not capable; the process is producing, or is at high risk of producing, out-of-spec results.
+    - **PPM (Parts Per Million)**: The expected number of defective parts per million units produced, calculated from the process distribution and specification limits. This translates the statistical Cpk value into a direct business and quality impact.
     """)
 
 # Use the same data as the SPC chart for this example
 lsl = 95 # Lower Specification Limit
 usl = 105 # Upper Specification Limit
 
-cpk_value = calculate_cpk(spc_df['Value'], usl, lsl)
+# --- Layout for Capability Analysis ---
+col1, col2 = st.columns([1, 2])
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Lower Spec Limit (LSL)", f"{lsl}")
-col2.metric("Upper Spec Limit (USL)", f"{usl}")
-col3.metric("Process Capability (Cpk)", f"{cpk_value:.2f}")
+with col1:
+    st.subheader("Capability Metrics")
+    cpk_value = calculate_cpk(spc_df['Value'], usl, lsl)
+    
+    # Calculate PPM
+    mean = spc_df['Value'].mean()
+    std_dev = spc_df['Value'].std()
+    z_usl = (usl - mean) / std_dev
+    z_lsl = (lsl - mean) / std_dev
+    prob_above_usl = 1 - norm.cdf(z_usl)
+    prob_below_lsl = norm.cdf(z_lsl)
+    ppm = (prob_above_usl + prob_below_lsl) * 1_000_000
 
-if cpk_value < 1.0:
-    st.error("Process is NOT CAPABLE of meeting specifications.")
-elif cpk_value < 1.33:
-    st.warning("Process is MARGINALLY CAPABLE. Improvements to reduce variability are recommended.")
-else:
-    st.success("Process is CAPABLE of meeting specifications.")
+    st.metric("Lower Spec Limit (LSL)", f"{lsl}")
+    st.metric("Upper Spec Limit (USL)", f"{usl}")
+    st.metric("Process Capability (Cpk)", f"{cpk_value:.2f}")
+    st.metric("Expected Defective Rate (PPM)", f"{ppm:,.0f}")
+
+    if cpk_value < 1.0:
+        st.error("Process is NOT CAPABLE of meeting specifications.")
+    elif cpk_value < 1.33:
+        st.warning("Process is MARGINALLY CAPABLE. Improvements to reduce variability or re-center the mean are recommended.")
+    else:
+        st.success("Process is CAPABLE of meeting specifications.")
+
+with col2:
+    st.subheader("Process Distribution vs. Specification Limits")
+    # Create the histogram
+    fig_hist = px.histogram(spc_df, x="Value", nbins=20, histnorm='probability density', marginal="rug",
+                            title="Process Capability Histogram")
+    
+    # Add the smoothed KDE curve
+    # We need to manually create the KDE data to overlay it
+    from statsmodels.nonparametric.kde import KDEUnivariate
+    kde = KDEUnivariate(spc_df['Value'].values)
+    kde.fit()
+    x_kde = np.linspace(spc_df['Value'].min(), spc_df['Value'].max(), 100)
+    y_kde = kde.evaluate(x_kde)
+    fig_hist.add_trace(go.Scatter(x=x_kde, y=y_kde, mode='lines', name='KDE', line=dict(color='firebrick')))
+    
+    # Add vertical lines for LSL, USL, and Mean
+    fig_hist.add_vline(x=lsl, line_width=2, line_dash="dash", line_color="red", annotation_text="LSL")
+    fig_hist.add_vline(x=usl, line_width=2, line_dash="dash", line_color="red", annotation_text="USL")
+    fig_hist.add_vline(x=mean, line_width=2, line_dash="dot", line_color="green", annotation_text="Mean")
+
+    # Add shaded regions for out-of-spec areas
+    fig_hist.add_vrect(x0=spc_df['Value'].min(), x1=lsl, fillcolor="red", opacity=0.1, line_width=0, annotation_text="OOS", annotation_position="top left")
+    fig_hist.add_vrect(x0=usl, x1=spc_df['Value'].max(), fillcolor="red", opacity=0.1, line_width=0)
+    
+    fig_hist.update_layout(yaxis_title="Density")
+    st.plotly_chart(fig_hist, use_container_width=True)
+
+with st.expander("📊 **Results & Analysis**"):
+    st.markdown(f"""
+    #### Analysis of the Capability Plot
+    This plot provides a clear visual assessment of how the process distribution ("voice of the process") fits within the specification limits ("voice of the customer").
+    - The bulk of the process data, represented by the histogram bars and the red KDE curve, is centered at a mean of **{mean:.2f}**.
+    - We can see that the process is not perfectly centered between the LSL ({lsl}) and USL ({usl}). The mean is closer to the USL.
+    - The "tail" of the process distribution on the right side extends beyond the USL, which is visually confirmed by the shaded red "OOS" (Out of Spec) region. This is the direct cause of the predicted defective PPM.
+    - The **Cpk of {cpk_value:.2f}** quantifies this relationship. Since the value is less than 1.0, it confirms the process is not capable. The primary reason is that the process is not centered, and its variability (spread) is too wide relative to the specification range.
+    
+    **Action Required:** To improve this process, two strategies should be considered:
+    1.  **Re-center the Process**: Investigate and correct the systematic bias that is pushing the mean towards the USL.
+    2.  **Reduce Variation**: Implement process improvements (e.g., using Six Sigma or DOE methodologies) to reduce the standard deviation, which would make the distribution "taller and narrower," pulling the tails away from the specification limits.
+    """)
