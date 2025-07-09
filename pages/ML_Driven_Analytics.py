@@ -2,106 +2,125 @@
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from sklearn.inspection import permutation_importance, PartialDependenceDisplay
+from sklearn.tree import plot_tree
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+import shap
 from utils import (generate_instrument_health_data, train_instrument_model,
-                   generate_multivariate_qc_data, train_anomaly_model,
+                   generate_golden_batch_data, generate_live_qc_data, train_autoencoder_model,
                    generate_rca_data, train_rca_model)
 
 st.set_page_config(page_title="ML-Driven Analytics", layout="wide")
 st.title("🤖 ML-Driven Process Analytics")
-st.markdown("### Proactive and predictive insights using model-agnostic explainability.")
+st.markdown("### Advanced analytics for proactive process control and deep insights.")
 
-# ... (Disclaimer expander remains the same) ...
+with st.expander("⚠️ Important Disclaimer & Regulatory Context"):
+    st.warning("""
+    The models on this page are for **investigational use only**. They are designed to provide insights, accelerate troubleshooting, and guide process improvement activities. They do not replace validated QC procedures, SPC rules, or formal CAPA investigations required by **21 CFR 820** and **ISO 13485**.
+    """)
 
 tab1, tab2, tab3 = st.tabs(["**Predictive Instrument Health**", "**Multivariate Anomaly Detection**", "**Automated Root Cause Insights**"])
 
 with tab1:
-    st.header("Predictive Instrument Health (e.g., HPLC System)")
+    st.header("Predictive Instrument Health with LightGBM & SHAP")
     
     instrument_df = generate_instrument_health_data()
-    model, X, best_params = train_instrument_model(instrument_df)
+    model, X = train_instrument_model(instrument_df)
     instrument_df['Health Score'] = 1 - model.predict_proba(X)[:, 1]
 
-    # ... (Health score plot and metrics remain the same) ...
-    col1, col2 = st.columns([2,1])
-    # ...
-
-    st.subheader("Model Explainability: Which Features Matter Most?")
+    col1, col2 = st.columns([2,1.2])
+    with col1:
+        st.markdown("**Instrument Health Score Over Time**")
+        fig = px.line(instrument_df, x='Run ID', y='Health Score', title="Health Score (1 - Prob. of Failure)", range_y=[0, 1])
+        fig.add_hline(y=0.5, line_dash="dot", line_color="red", annotation_text="Failure Threshold")
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        st.metric("Current Health Score", f"{instrument_df['Health Score'].iloc[-1]:.2%}")
+        st.metric("Predicted Runs to Failure", "3-8" if instrument_df['Health Score'].iloc[-1] < 0.7 else ">20")
     
-    # --- NEW: Permutation Feature Importance ---
-    st.markdown("**Permutation Feature Importance** measures how much the model's accuracy decreases when a feature's values are randomly shuffled. A larger drop means the feature is more important.")
+    st.subheader("Actionable Insight: Why is the latest run's score what it is?")
+    st.markdown("This **SHAP Force Plot** provides an intuitive explanation for the most recent prediction. Features in red push the prediction towards failure, while features in blue push it towards health.")
     
-    perm_importance = permutation_importance(model, X, y=instrument_df['Failure'], n_repeats=10, random_state=42)
-    importance_df = pd.DataFrame({
-        'Feature': X.columns,
-        'Importance': perm_importance.importances_mean
-    }).sort_values(by="Importance", ascending=True)
+    # SHAP Force Plot for the latest instance
+    with st.spinner("Generating SHAP Force Plot..."):
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+        last_instance_idx = X.shape[0] - 1
+        
+        # This function needs to be defined to be used with st.pyplot
+        def plot_shap_force():
+            shap.force_plot(
+                explainer.expected_value[1], 
+                shap_values[1][last_instance_idx,:],
+                X.iloc[last_instance_idx,:],
+                matplotlib=True,
+                show=False,
+                text_rotation=10
+            )
+        
+        fig = plt.figure()
+        plot_shap_force()
+        st.pyplot(fig, bbox_inches='tight', clear_figure=True)
 
-    fig_perm = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Feature Importance (Permutation Method)')
-    st.plotly_chart(fig_perm, use_container_width=True)
-
-    # --- NEW: Partial Dependence Contour Plot ---
-    st.markdown("**Partial Dependence Plot (PDP)** shows how the model's prediction changes as we vary one or two features, holding all others constant. This 2D plot shows the interaction between the two most important features.")
-    
-    top_two_features = importance_df.sort_values(by="Importance", ascending=False).head(2)['Feature'].tolist()
-    
-    # Using scikit-learn's display function to generate the plot data
-    fig_pdp, ax_pdp = plt.subplots(figsize=(8, 6))
-    pdp_display = PartialDependenceDisplay.from_estimator(
-        model,
-        X,
-        features=top_two_features, # Features to plot
-        kind="average", # The default, shows average effect
-        ax=ax_pdp
-    )
-    ax_pdp.set_title(f'Partial Dependence of Failure Prediction on\n{top_two_features[0]} and {top_two_features[1]}')
-    st.pyplot(fig_pdp)
-
-
-# ... (The rest of the file for tabs 2 and 3 can remain the same) ...
 
 with tab2:
-    st.header("Multivariate Anomaly Detection in QC Data")
-    st.markdown("Using an Isolation Forest to find subtle, multi-dimensional anomalies that univariate SPC charts miss.")
+    st.header("Multivariate Anomaly Detection with an Autoencoder")
+    st.markdown("A neural network is trained on a 'golden batch' of normal data. It learns to reconstruct normal patterns. Anomalies are detected when the **Reconstruction Error** is high.")
+
+    # 1. Train model on normal data
+    golden_df = generate_golden_batch_data()
+    autoencoder, scaler = train_autoencoder_model(golden_df)
+
+    # 2. Apply to live data (which includes anomalies)
+    live_df = generate_live_qc_data(golden_df)
+    X_live_scaled = scaler.transform(live_df.drop('Run', axis=1))
+    X_live_pred = autoencoder.predict(X_live_scaled)
     
-    qc_df = generate_multivariate_qc_data()
-    model, qc_df_encoded = train_anomaly_model(qc_df)
-    qc_df['Anomaly'] = model.predict(qc_df_encoded[['Operator', 'Reagent Lot', 'Value']])
+    # 3. Calculate reconstruction error
+    mae_loss = np.mean(np.abs(X_live_pred - X_live_scaled), axis=1)
+    live_df['Reconstruction Error'] = mae_loss
     
-    fig_3d = px.scatter_3d(
-        qc_df, x='Run', y='Value', z='Operator', color=qc_df['Anomaly'].astype(str),
-        color_discrete_map={'1': 'blue', '-1': 'red'}, symbol='Reagent Lot',
-        title="3D View of QC Data with ML-Detected Anomalies"
-    )
-    fig_3d.update_traces(marker=dict(size=5), selector=dict(mode='markers'))
-    st.plotly_chart(fig_3d, use_container_width=True)
+    # 4. Set a dynamic threshold
+    X_train_pred = autoencoder.predict(scaler.transform(golden_df))
+    train_mae_loss = np.mean(np.abs(X_train_pred - scaler.transform(golden_df)), axis=1)
+    threshold = np.mean(train_mae_loss) + 3 * np.std(train_mae_loss)
+
+    # 5. Visualize
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=live_df['Run'], y=live_df['Reconstruction Error'], name='Reconstruction Error'))
+    fig.add_hline(y=threshold, line_dash="dot", line_color="red", annotation_text="Anomaly Threshold")
+    fig.update_layout(title="Live Process Monitoring via Reconstruction Error",
+                      xaxis_title="Run Number", yaxis_title="Mean Absolute Error")
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("SME Interpretation & Action Items"):
+        st.markdown("""
+        - **Why this is better:** Unlike univariate SPC, this method captures the *inter-relationships* between all monitored variables. A run is anomalous if the *pattern* is wrong, even if each individual variable is within its own limits.
+        - **Below Threshold:** The process is behaving like the "golden batch" and is considered normal.
+        - **Above Threshold:** The process has deviated significantly from normal operation. This requires immediate investigation. Notice how the model flags both the gradual drift and the sudden spike.
+        """)
 
 with tab3:
-    st.header("Automated Root Cause Insights")
-    st.markdown("Using a Decision Tree to provide a first-pass suggestion for the root cause of a process failure.")
+    st.header("Automated Root Cause Insights with a Random Forest")
+    st.markdown("A robust Random Forest model suggests the most likely root cause of a failure, while we can still inspect a single tree for interpretability.")
     
-    # This call now correctly unpacks the 4 values returned by the updated utils function
     rca_df = generate_rca_data()
-    model, X, y, best_params_rca = train_rca_model(rca_df)
+    model, X, y = train_rca_model(rca_df)
     
     col1, col2 = st.columns([2,1])
     with col1:
-        st.subheader("Failure Investigation Decision Tree")
+        st.subheader("Example Decision Logic (from one tree in the forest)")
         fig_tree, ax_tree = plt.subplots(figsize=(15, 8))
-        plot_tree(model, feature_names=X.columns, class_names=sorted(y.unique()), filled=True, rounded=True, ax=ax_tree, fontsize=10)
+        plot_tree(model.estimators_[5], feature_names=X.columns, class_names=sorted(y.unique()), filled=True, rounded=True, ax=ax_tree, fontsize=10)
         st.pyplot(fig_tree)
     with col2:
-        st.subheader("Most Important Factors")
+        st.subheader("Most Important Factors (from the full forest)")
         feature_importance = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values('Importance', ascending=False)
         st.dataframe(feature_importance)
         st.subheader("Simulate a New Failure")
-        age = st.slider("Instrument Age (mo)", 1, 36, 10)
-        reagent = st.slider("Reagent Age (days)", 1, 90, 80)
-        exp = st.slider("Operator Experience (yr)", 1, 5, 2)
+        age = st.slider("Instrument Age (mo)", 1, 36, 10); reagent = st.slider("Reagent Age (days)", 1, 90, 80); exp = st.slider("Operator Experience (yr)", 1, 5, 2)
         prediction = model.predict([[age, reagent, exp]])
         st.error(f"**Predicted Root Cause:** {prediction[0]}")
-        with st.expander("Optimized Model Parameters"):
-            st.json(best_params_rca)
