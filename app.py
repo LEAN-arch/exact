@@ -28,7 +28,7 @@ col1.metric("Active Projects", f"{total_projects - complete_projects}")
 col2.metric("High-Score Risks (>6)", f"{high_risk_score_items}", delta=high_risk_score_items, delta_color="inverse")
 col3.metric("On-Time Completion %", f"{on_time_completion_rate:.1f}%", "Target: >90%")
 
-# This line now works because generate_project_data() provides datetime64 columns
+# This line now works correctly because utils.py provides datetime64 columns
 avg_duration = (projects_df['Due Date'] - projects_df['Start Date']).dt.days.mean()
 col4.metric("Avg. Project Duration", f"{avg_duration:.1f} days")
 
@@ -77,7 +77,7 @@ st.dataframe(projects_df, use_container_width=True)
 st.divider()
 with st.expander("🌐 Regulatory Context & Legend"):
     st.markdown("""
-    This dashboard provides oversight required by quality management systems to ensure projects are controlled, risks are managed, and progress is visible to leadership.
+    This dashboard provides oversight required by quality management systems to ensure projects are controlled, risks are managed, and progress is visible to leadership. This directly supports several key regulatory requirements:
 
     - **Project & Timeline Management**: Supports the overall management of **Design Controls** as required by:
         - **21 CFR 820.30(b)**: *Design and Development Planning* - Establishes a framework for plans that identify, describe, and assign activities.
@@ -87,5 +87,7 @@ with st.expander("🌐 Regulatory Context & Legend"):
         - **ISO 14971:2019**: *Medical devices — Application of risk management*. The visualization helps in identifying and prioritizing risks for control measures.
         - **21 CFR 820.30(g)**: *Design Risk Analysis* - Requires the identification and evaluation of risks, and ensuring they are mitigated.
         
-    - **Advanced Process Analytics (See ML-Driven Page)**: This dashboard includes an additional page with Machine Learning models. These serve as **investigational and process improvement tools**, aligning with the principles of **ICH Q10 (Pharmaceutical Quality System)**, which encourages a scientific, risk-based approach to continual improvement throughout the product lifecycle. These models supplement, but do not replace, the validated methods required by 21 CFR 820 and ISO 13485.
+    - **Advanced Process Analytics**: The "ML-Driven Analytics" page includes models that serve as **investigational and process improvement tools**, aligning with the principles of **ICH Q10 (Pharmaceutical Quality System)**, which encourages a scientific, risk-based approach to continual improvement.
+    
+    - **Process Optimization & Quality by Design (QbD)**: The "Process Optimization (DOE/RSM)" page demonstrates advanced capabilities for process characterization, a core duty of a Staff Scientist. This aligns with modern regulatory expectations outlined in **ICH Q8 (Pharmaceutical Development)**, which encourages building quality into a product through a deep understanding of the process (the "Design Space").
     """)
