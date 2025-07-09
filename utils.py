@@ -16,7 +16,6 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, PolynomialFeatures, StandardScaler
 from sklearn.linear_model import LinearRegression
-from sklearn.inspection import permutation_importance
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -47,8 +46,14 @@ def generate_project_data():
         'Due Date': [date.today() + timedelta(days=14), date.today() + timedelta(days=25), date.today() - timedelta(days=30), date.today() + timedelta(days=40)],
     }
     df = pd.DataFrame(data)
+
+    # --- THIS IS THE CRUCIAL FIX ---
+    # Explicitly convert the date columns to pandas datetime objects.
+    # This ensures that subsequent operations (like subtraction) result in a
+    # Series with the correct timedelta64 dtype, which supports the .dt accessor.
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['Due Date'] = pd.to_datetime(df['Due Date'])
+
     return df
 
 def generate_risk_data():
@@ -107,16 +112,6 @@ def detect_westgard_rules(df, value_col='Value'):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '4_1s'})
     return pd.DataFrame(violations).drop_duplicates(subset=['Run'])
 
-def generate_specificity_data():
-    """Generates data for an assay specificity and interference study."""
-    np.random.seed(33); data = []
-    data.extend([{'Sample Type': 'Blank', 'Signal': v} for v in np.random.normal(10, 2, 10)])
-    data.extend([{'Sample Type': 'Target Only', 'Signal': v} for v in np.random.normal(200, 15, 10)])
-    data.extend([{'Sample Type': 'Interferent A', 'Signal': v} for v in np.random.normal(12, 3, 10)])
-    data.extend([{'Sample Type': 'Interferent B', 'Signal': v} for v in np.random.normal(15, 4, 10)])
-    data.extend([{'Sample Type': 'Target + Interferents', 'Signal': v} for v in np.random.normal(205, 16, 10)])
-    return pd.DataFrame(data)
-
 def generate_doe_data():
     """Generates data simulating a Central Composite Design (CCD)."""
     np.random.seed(42)
@@ -151,7 +146,14 @@ def generate_instrument_health_data():
     base_temp = 35 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, runs)); temperature = base_temp + np.random.normal(0, 0.1, runs)
     drift = np.exp(np.linspace(0, 2.5, 20)); pressure[80:] += drift * 2; temperature[80:] += drift / 10
     flow_rate_stability = np.random.normal(0.99, 0.005, runs); flow_rate_stability[85:] -= np.logspace(-3, -1.5, 15)
-    df = pd.DataFrame({'Run ID': range(runs), 'Pressure (psi)': pressure, 'Column Temp (°C)': temperature, 'Flow Rate Stability': flow_rate_stability})
+    
+    # BEST PRACTICE FIX: Using underscores to prevent LightGBM warning
+    df = pd.DataFrame({
+        'Run_ID': range(runs), 
+        'Pressure_psi': pressure, 
+        'Column_Temp_C': temperature, 
+        'Flow_Rate_Stability': flow_rate_stability
+    })
     df['Failure'] = 0; df.loc[90:, 'Failure'] = 1
     return df
 
@@ -205,9 +207,11 @@ def train_autoencoder_model(golden_df):
 
 def train_instrument_model(df):
     """UPGRADED: Trains a LightGBM model to predict instrument failure."""
-    X = df[['Pressure (psi)', 'Column Temp (°C)', 'Flow Rate Stability']]; y = df['Failure']
+    # Using the new column names with underscores
+    X = df[['Pressure_psi', 'Column_Temp_C', 'Flow_Rate_Stability']]; y = df['Failure']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    model = lgb.LGBMClassifier(random_state=42)
+    # BEST PRACTICE: Suppress verbose output in logs
+    model = lgb.LGBMClassifier(random_state=42, verbosity=-1)
     model.fit(X_train, y_train)
     return model, X
 
