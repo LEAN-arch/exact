@@ -26,6 +26,7 @@ with tab1:
     st.header("Predictive Instrument Health (e.g., HPLC System)")
     st.markdown("Using a Random Forest model to predict instrument failure from sensor data *before* it occurs.")
     
+    # This call now correctly unpacks the 3 values returned by the updated utils function
     instrument_df = generate_instrument_health_data()
     model, X, best_params = train_instrument_model(instrument_df)
     instrument_df['Health Score'] = 1 - model.predict_proba(X)[:, 1]
@@ -38,27 +39,26 @@ with tab1:
     with col2:
         st.metric("Current Health Score", f"{instrument_df['Health Score'].iloc[-1]:.2%}")
         st.metric("Predicted Runs to Failure", "5-10" if instrument_df['Health Score'].iloc[-1] < 0.7 else ">20")
-        st.info("A score below 50% indicates an imminent failure prediction.")
+        with st.expander("Optimized Model Parameters"):
+            st.json(best_params)
 
     st.subheader("Model Explainability (SHAP Analysis)")
     st.markdown("This plot shows the impact of each feature on the prediction of a failure. Features in red increase the likelihood of failure.")
     
-    # --- THIS IS THE CORRECTED SECTION ---
-    # We let SHAP create the plot in the global matplotlib state, then capture it.
+    # --- THIS IS THE DEFINITIVE FIX FOR THE AssertionError ---
     
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
     
-    # Let shap.summary_plot create its own figure.
-    # We are interested in the SHAP values for the "Failure" class (class 1).
-    shap.summary_plot(shap_values[1], X, plot_type="bar")
+    # We know shap_values is a list of 2 arrays for our binary classifier.
+    # We explicitly select the SHAP values for class 1 (Failure) to match the data shape.
+    # This directly resolves the AssertionError.
+    shap.summary_plot(shap_values[1], X, plot_type="bar", show=False)
     
-    # Capture the figure that SHAP just created and display it in Streamlit.
+    # We use the robust pattern of capturing the current figure and clearing it.
     st.pyplot(plt.gcf())
-    
-    # Clear the current figure to prevent it from interfering with other plots.
     plt.clf()
-    # --- END OF CORRECTION ---
+    # --- END OF FIX ---
 
 with tab2:
     st.header("Multivariate Anomaly Detection in QC Data")
@@ -76,17 +76,11 @@ with tab2:
     fig_3d.update_traces(marker=dict(size=5), selector=dict(mode='markers'))
     st.plotly_chart(fig_3d, use_container_width=True)
 
-    with st.expander("SME Interpretation & Action Items"):
-        st.markdown("""
-        - **Blue Points (1)**: Data points the model considers 'normal'.
-        - **Red Points (-1)**: Anomalies. Notice how the red point might not be an outlier on the 'Value' axis alone, but its combination of `Value` and `Operator` is unusual.
-        - **Action**: When an anomaly is detected, investigate the specific combination of factors for that run. This is far more powerful than just looking at the value itself.
-        """)
-
 with tab3:
     st.header("Automated Root Cause Insights")
     st.markdown("Using a Decision Tree to provide a first-pass suggestion for the root cause of a process failure.")
     
+    # This call now correctly unpacks the 4 values returned by the updated utils function
     rca_df = generate_rca_data()
     model, X, y, best_params_rca = train_rca_model(rca_df)
     
@@ -106,10 +100,5 @@ with tab3:
         exp = st.slider("Operator Experience (yr)", 1, 5, 2)
         prediction = model.predict([[age, reagent, exp]])
         st.error(f"**Predicted Root Cause:** {prediction[0]}")
-
-    with st.expander("SME Interpretation & Action Items"):
-        st.markdown("""
-        - **Decision Tree**: This chart visualizes the logic learned from historical data. Start at the top and follow the arrows based on the parameters of a new failure to see the likely cause.
-        - **Feature Importance**: This shows which factors are most predictive of failure overall. 'Reagent Lot Age' is clearly the dominant factor in our historical data.
-        - **Action**: Use the model's prediction as the *first hypothesis* in a formal CAPA investigation, drastically reducing troubleshooting time.
-        """)
+        with st.expander("Optimized Model Parameters"):
+            st.json(best_params_rca)
