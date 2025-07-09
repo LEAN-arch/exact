@@ -93,15 +93,13 @@ fig.add_trace(go.Surface(
     z=yield_pred, x=temp_range, y=ph_range, colorscale='RdBu', showscale=False,
     cmin=np.min(yield_pred), cmax=np.max(yield_pred)
 ), row=1, col=1)
-# Add experimental points to 3D plot
 fig.add_trace(go.Scatter3d(
     x=doe_df['Temperature (°C)'], y=doe_df['pH'], z=doe_df['Yield (%)'],
     mode='markers', marker=dict(size=5, color='black'), name='DOE Points'
 ), row=1, col=1)
-# Add optimum point to 3D plot
 fig.add_trace(go.Scatter3d(
     x=[opt_settings[0]], y=[opt_settings[1]], z=[max_yield],
-    mode='markers', marker=dict(size=10, color='red', symbol='cross'), name='Optimum'
+    mode='markers', marker=dict(size=10, color='yellow', symbol='cross'), name='Optimum'
 ), row=1, col=1)
 
 # 2D Contour Plot
@@ -109,34 +107,36 @@ fig.add_trace(go.Contour(
     z=yield_pred, x=temp_range, y=ph_range, colorscale='RdBu', showscale=False,
     contours=dict(coloring='lines', showlabels=True), line=dict(width=1)
 ), row=1, col=2)
-# Add the Proven Acceptable Range (PAR)
 fig.add_trace(go.Contour(
     z=yield_pred, x=temp_range, y=ph_range, showscale=False,
     contours_coloring='lines', line_width=0,
     contours=dict(start=yield_spec, end=max_yield, showlabels=False),
-    # Fill the area where yield is > spec
     fillcolor='rgba(0, 255, 0, 0.3)',
 ), row=1, col=2)
-# Add experimental points to 2D plot
 fig.add_trace(go.Scatter(
     x=doe_df['Temperature (°C)'], y=doe_df['pH'],
     mode='markers', marker=dict(color='black'), name='DOE Points', showlegend=False
 ), row=1, col=2)
-# Add optimum point to 2D plot
 fig.add_trace(go.Scatter(
     x=[opt_settings[0]], y=[opt_settings[1]], mode='markers',
     marker=dict(size=12, color='red', symbol='cross'), name='Optimum', showlegend=False
 ), row=1, col=2)
 
-# Update layout
-fig.update_layout(height=700, title_text="Process Design Space Visualization", margin=dict(l=40, r=40, b=40, t=90))
-fig.update_scenes(
-    xaxis_title_text='Temperature (°C)',
-    yaxis_title_text='pH',
-    zaxis_title_text='Yield (%)',
-    patch=dict(selector=1)
+# --- THIS IS THE CORRECTED SECTION ---
+# Update layout properties for the entire figure and for specific axes/scenes
+fig.update_layout(
+    height=700, 
+    title_text="Process Design Space Visualization", 
+    margin=dict(l=40, r=40, b=40, t=90),
+    # Update the 3D scene directly by its name 'scene'
+    scene = dict(
+        xaxis_title='Temperature (°C)',
+        yaxis_title='pH',
+        zaxis_title='Yield (%)'
+    ),
+    # Update the 2D axes by their names 'xaxis' and 'yaxis' (for the second subplot)
+    xaxis2_title="Temperature (°C)",
+    yaxis2_title="pH"
 )
-fig.update_xaxes(title_text="Temperature (°C)", row=1, col=2)
-fig.update_yaxes(title_text="pH", row=1, col=2)
 
 st.plotly_chart(fig, use_container_width=True)
