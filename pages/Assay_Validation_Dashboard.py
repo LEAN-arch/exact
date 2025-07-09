@@ -40,9 +40,14 @@ with tab1:
         st.plotly_chart(fig_res, use_container_width=True)
     with col2:
         st.subheader("Linearity Statistics")
-        st.metric("R-squared (R²)", f"{model.rsquared:.4f}")
-        st.metric("Slope", f"{model.params[1]:.3f}")
-        st.metric("Y-Intercept", f"{model.params[0]:.3f}")
+        # MODIFIED: Used .iloc to fix FutureWarning from pandas
+        r_squared = model.rsquared
+        slope = model.params.iloc[1]  # Using .iloc[1] for slope
+        intercept = model.params.iloc[0] # Using .iloc[0] for intercept
+        
+        st.metric("R-squared (R²)", f"{r_squared:.4f}")
+        st.metric("Slope", f"{slope:.3f}")
+        st.metric("Y-Intercept", f"{intercept:.3f}")
 
 with tab2:
     st.header("Measurement System Analysis (Gage R&R)")
@@ -53,36 +58,22 @@ with tab2:
     
     col1, col2 = st.columns(2)
     with col1:
-        # --- THIS IS THE CORRECTED SECTION ---
-        # We restructure the data to use the more robust 'path' argument for the sunburst chart.
-        # Each row represents a leaf node, and columns define the hierarchy.
-        data_for_sunburst = {
-            'level_1': ['Total Variation', 'Total Variation'],
-            'level_2': ['Part-to-Part', 'Gage R&R'],
-            'level_3': [None, 'Repeatability'],
-            'level_4': [None, 'Reproducibility'],
-            'values': [msa_data['part_var'], msa_data['repeatability_var']] # Add a placeholder for reproducibility
-        }
-        
-        # A small hack is needed to show both repeatability and reproducibility under Gage R&R
-        # We create a dataframe with two rows for the Gage R&R path.
-        df_sunburst = pd.DataFrame({
-            'Path': [
-                ['Total Variation', 'Part-to-Part'],
-                ['Total Variation', 'Gage R&R', 'Repeatability'],
-                ['Total Variation', 'Gage R&R', 'Reproducibility']
-            ],
-            'Values': [
-                msa_data['part_var'],
-                msa_data['repeatability_var'],
-                msa_data['reproducibility_var']
-            ]
-        })
+        # --- THIS IS THE CORRECTED SECTION for the ValueError ---
+        # We restructure the data so that each level of the hierarchy is its own column.
+        df_sunburst = pd.DataFrame([
+            # Path for Part-to-Part Variation
+            dict(level1="Total Variation", level2="Part-to-Part", values=msa_data['part_var']),
+            # Path for Repeatability
+            dict(level1="Total Variation", level2="Gage R&R", level3="Repeatability", values=msa_data['repeatability_var']),
+            # Path for Reproducibility
+            dict(level1="Total Variation", level2="Gage R&R", level3="Reproducibility", values=msa_data['reproducibility_var']),
+        ])
 
         fig = px.sunburst(
             df_sunburst,
-            path='Path',
-            values='Values',
+            # We provide a LIST of column names to the 'path' argument
+            path=['level1', 'level2', 'level3'],
+            values='values',
             title="Hierarchical Sources of Variation"
         )
         fig.update_layout(margin=dict(t=40, l=0, r=0, b=0))
