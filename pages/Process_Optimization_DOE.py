@@ -134,9 +134,9 @@ fig.update_layout(
         yaxis_title='pH',
         zaxis_title='Yield (%)'
     ),
-    # Update the 2D axes by their names 'xaxis' and 'yaxis' (for the second subplot)
-    xaxis2_title="Temperature (°C)",
-    yaxis2_title="pH"
+    # Update the 2D axes by addressing them as objects
+    xaxis2 = dict(title='Temperature (°C)'),
+    yaxis2 = dict(title='pH')
 )
 
 st.plotly_chart(fig, use_container_width=True)
