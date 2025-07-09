@@ -73,7 +73,7 @@ with tab1:
             # Debug output
             st.write(f"Debug: X shape: {X.shape}, SHAP values shape: {np.array(shap_values).shape}, Last instance index: {last_instance_idx}, Model classes: {model.classes_}")
 
-            # Validate SHAP values
+            # Handle SHAP values for single-class or multi-class output
             if isinstance(shap_values, list):
                 if len(shap_values) != len(model.classes_):
                     raise ValueError(f"SHAP values length ({len(shap_values)}) does not match model classes ({len(model.classes_)})")
@@ -87,7 +87,7 @@ with tab1:
             if shap_vals.size == 0 or X.iloc[last_instance_idx, :].empty:
                 raise ValueError("SHAP values or input data for last instance is empty")
 
-            # Use HTML-based force plot to avoid Matplotlib issues
+            # HTML-based force plot
             shap.initjs()
             force_plot = shap.force_plot(
                 base_value,
@@ -184,3 +184,4 @@ with tab3:
         st.error(f"Error in root cause analysis: {e}")
         logger.error(f"Root cause analysis error: {e}")
 ```
+
