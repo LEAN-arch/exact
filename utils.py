@@ -221,3 +221,25 @@ def train_rca_model(df):
     model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
     model.fit(X, y)
     return model, X, y
+
+# --- NEW: Specificity/Interference Data Generation ---
+def generate_specificity_data():
+    """Generates data for an assay specificity and interference study."""
+    np.random.seed(33); data = []
+    data.extend([{'Sample Type': 'Blank', 'Signal': v} for v in np.random.normal(10, 2, 10)])
+    data.extend([{'Sample Type': 'Target Only', 'Signal': v} for v in np.random.normal(200, 15, 10)])
+    data.extend([{'Sample Type': 'Interferent A', 'Signal': v} for v in np.random.normal(12, 3, 10)])
+    data.extend([{'Sample Type': 'Interferent B', 'Signal': v} for v in np.random.normal(15, 4, 10)])
+    data.extend([{'Sample Type': 'Target + Interferents', 'Signal': v} for v in np.random.normal(195, 16, 10)]) # Slight suppression
+    return pd.DataFrame(data)
+
+# --- NEW: Process Capability Index (Cpk) Calculation ---
+def calculate_cpk(data_series, usl, lsl):
+    """Calculates the Cpk for a given series of data and spec limits."""
+    mean = data_series.mean()
+    std_dev = data_series.std()
+    if std_dev == 0:
+        return np.inf
+    cpu = (usl - mean) / (3 * std_dev)
+    cpl = (mean - lsl) / (3 * std_dev)
+    return min(cpu, cpl)
