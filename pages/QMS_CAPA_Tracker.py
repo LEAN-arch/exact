@@ -21,10 +21,9 @@ with st.expander("🌐 Regulatory Context & Legend (21 CFR 820)"):
 
 # --- 1. KPIs ---
 st.header("1. Quality System KPIs")
-# Sample data for KPIs
 total_open_capas = 5
 overdue_items = 2 # 1 CAPA + 1 Doc Review
-avg_cycle_time_days = 45 # Average time from opening to closing a CAPA
+avg_cycle_time_days = 45
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Open CAPAs", f"{total_open_capas}")
@@ -54,19 +53,23 @@ with col1:
         'Due Date': [date.today() + timedelta(days=10), date.today() - timedelta(days=5), date.today() + timedelta(days=25), date.today() + timedelta(days=20), date.today() + timedelta(days=15)]
     }
     capa_df = pd.DataFrame(capa_data)
-    capa_df['Status'] = capa_df['Due Date'].apply(lambda x: 'Overdue' if x < date.today() else 'On Time')
+    
+    # --- THIS IS THE FIX ---
+    # Explicitly convert date columns to pandas datetime64 dtype before plotting
+    capa_df['Opened Date'] = pd.to_datetime(capa_df['Opened Date'])
+    capa_df['Due Date'] = pd.to_datetime(capa_df['Due Date'])
+    # --- END OF FIX ---
+    
+    capa_df['Status'] = capa_df['Due Date'].apply(lambda x: 'Overdue' if x < pd.Timestamp.now() else 'On Time')
     
     fig_gantt = px.timeline(
         capa_df, x_start="Opened Date", x_end="Due Date", y="CAPA ID", color="Phase",
         title="Open CAPA Lifecycle & Due Dates",
-        # Custom data allows for richer hover information
         custom_data=['Status']
     )
     fig_gantt.update_traces(
-        # Use hovertemplate to display custom data
         hovertemplate="<b>CAPA ID</b>: %{y}<br><b>Phase</b>: %{color}<br><b>Opened</b>: %{base|%Y-%m-%d}<br><b>Due</b>: %{x|%Y-%m-%d}<br><b>Status</b>: %{customdata[0]}<extra></extra>"
     )
-    # Add a vertical line for today's date
     fig_gantt.add_vline(x=date.today(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
     st.plotly_chart(fig_gantt, use_container_width=True)
 
@@ -112,6 +115,12 @@ doc_data = {
     'Next Review Due': [date.today() + timedelta(days=45), date.today() + timedelta(days=90), date.today() - timedelta(days=10)]
 }
 doc_df = pd.DataFrame(doc_data)
+
+# --- THIS IS THE FIX ---
+# Explicitly convert date columns to pandas datetime64 dtype before plotting
+doc_df['Last Review'] = pd.to_datetime(doc_df['Last Review'])
+doc_df['Next Review Due'] = pd.to_datetime(doc_df['Next Review Due'])
+# --- END OF FIX ---
 
 fig_docs = px.timeline(
     doc_df, x_start="Last Review", x_end="Next Review Due", y="Document ID", color="Title",
