@@ -54,7 +54,6 @@ with col1:
     }
     capa_df = pd.DataFrame(capa_data)
     
-    # Explicitly convert date columns to pandas datetime64 dtype before plotting
     capa_df['Opened Date'] = pd.to_datetime(capa_df['Opened Date'])
     capa_df['Due Date'] = pd.to_datetime(capa_df['Due Date'])
     
@@ -68,7 +67,10 @@ with col1:
     fig_gantt.update_traces(
         hovertemplate="<b>CAPA ID</b>: %{y}<br><b>Phase</b>: %{color}<br><b>Opened</b>: %{base|%Y-%m-%d}<br><b>Due</b>: %{x|%Y-%m-%d}<br><b>Status</b>: %{customdata[0]}<extra></extra>"
     )
-    fig_gantt.add_vline(x=date.today(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+    # --- THIS IS THE FIX ---
+    # Pass a pandas Timestamp object to add_vline instead of a native datetime.date
+    fig_gantt.add_vline(x=pd.Timestamp.now(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+    # --- END OF FIX ---
     st.plotly_chart(fig_gantt, use_container_width=True)
 
 
@@ -114,15 +116,14 @@ doc_data = {
 }
 doc_df = pd.DataFrame(doc_data)
 
-# --- THIS IS THE SECOND FIX ---
-# Explicitly convert date columns to pandas datetime64 dtype before plotting
 doc_df['Last Review'] = pd.to_datetime(doc_df['Last Review'])
 doc_df['Next Review Due'] = pd.to_datetime(doc_df['Next Review Due'])
-# --- END OF FIX ---
 
 fig_docs = px.timeline(
     doc_df, x_start="Last Review", x_end="Next Review Due", y="Document ID", color="Title",
     title="Document Periodic Review Timeline"
 )
-fig_docs.add_vline(x=date.today(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+# --- THIS IS THE SECOND FIX ---
+fig_docs.add_vline(x=pd.Timestamp.now(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+# --- END OF FIX ---
 st.plotly_chart(fig_docs, use_container_width=True)
