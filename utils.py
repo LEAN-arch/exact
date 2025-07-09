@@ -282,3 +282,10 @@ def generate_defect_category_data():
         'Category': ['UI/UX', 'Calculation Engine', 'Reporting', 'Data Handling', 'Performance'],
         'Count': [12, 7, 5, 3, 1]
     }).sort_values('Count', ascending=False)
+
+def generate_capa_source_data():
+    """Generates data for a CAPA source Pareto chart."""
+    return pd.DataFrame({
+        'Source': ['Out of Specification (OOS)', 'Internal Audit', 'Customer Complaint', 'Process Trend', 'Supplier Issue'],
+        'Count': [8, 5, 3, 2, 1]
+    }).sort_values('Count', ascending=False)
