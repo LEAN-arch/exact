@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.tree import plot_tree
-import matplotlib.pyplot as plt  # This line will now work correctly
+import matplotlib.pyplot as plt
 import shap
 from utils import (generate_instrument_health_data, train_instrument_model,
                    generate_multivariate_qc_data, train_anomaly_model,
@@ -26,13 +26,10 @@ with tab1:
     st.header("Predictive Instrument Health (e.g., HPLC System)")
     st.markdown("Using a Random Forest model to predict instrument failure from sensor data *before* it occurs.")
     
-    # --- Model Training & Prediction ---
     instrument_df = generate_instrument_health_data()
-    # Note: Assuming train_instrument_model from utils returns best_params as the third element
     model, X, best_params = train_instrument_model(instrument_df)
     instrument_df['Health Score'] = 1 - model.predict_proba(X)[:, 1]
 
-    # --- Visualization ---
     col1, col2 = st.columns([2,1])
     with col1:
         fig = px.line(instrument_df, x='Run ID', y='Health Score', title="Instrument Health Score Over Time", range_y=[0, 1])
@@ -44,33 +41,36 @@ with tab1:
         st.info("A score below 50% indicates an imminent failure prediction.")
 
     st.subheader("Model Explainability (SHAP Analysis)")
-    st.markdown("This plot shows *why* the model is making its prediction. Red features are pushing the score towards failure.")
+    st.markdown("This plot shows the impact of each feature on the prediction of a failure. Features in red increase the likelihood of failure.")
     
-    # SHAP Plot
+    # --- THIS IS THE CORRECTED SECTION ---
+    # We let SHAP create the plot in the global matplotlib state, then capture it.
+    
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
-    fig_shap, ax_shap = plt.subplots(figsize=(10, 4))
-    # Check if shap_values is a list (for binary classification)
-    if isinstance(shap_values, list):
-        shap.summary_plot(shap_values[1], X, plot_type="bar", show=False)
-    else:
-        shap.summary_plot(shap_values, X, plot_type="bar", show=False)
-    st.pyplot(fig_shap)
+    
+    # Let shap.summary_plot create its own figure.
+    # We are interested in the SHAP values for the "Failure" class (class 1).
+    shap.summary_plot(shap_values[1], X, plot_type="bar")
+    
+    # Capture the figure that SHAP just created and display it in Streamlit.
+    st.pyplot(plt.gcf())
+    
+    # Clear the current figure to prevent it from interfering with other plots.
+    plt.clf()
+    # --- END OF CORRECTION ---
 
 with tab2:
     st.header("Multivariate Anomaly Detection in QC Data")
     st.markdown("Using an Isolation Forest to find subtle, multi-dimensional anomalies that univariate SPC charts miss.")
     
-    # --- Model Training & Prediction ---
     qc_df = generate_multivariate_qc_data()
     model, qc_df_encoded = train_anomaly_model(qc_df)
     qc_df['Anomaly'] = model.predict(qc_df_encoded[['Operator', 'Reagent Lot', 'Value']])
     
-    # --- Visualization ---
     fig_3d = px.scatter_3d(
         qc_df, x='Run', y='Value', z='Operator', color=qc_df['Anomaly'].astype(str),
-        color_discrete_map={'1': 'blue', '-1': 'red'},
-        symbol='Reagent Lot',
+        color_discrete_map={'1': 'blue', '-1': 'red'}, symbol='Reagent Lot',
         title="3D View of QC Data with ML-Detected Anomalies"
     )
     fig_3d.update_traces(marker=dict(size=5), selector=dict(mode='markers'))
@@ -87,16 +87,14 @@ with tab3:
     st.header("Automated Root Cause Insights")
     st.markdown("Using a Decision Tree to provide a first-pass suggestion for the root cause of a process failure.")
     
-    # --- Model Training & Visualization ---
     rca_df = generate_rca_data()
-    # Note: Assuming train_rca_model from utils returns best_params as the fourth element
     model, X, y, best_params_rca = train_rca_model(rca_df)
     
     col1, col2 = st.columns([2,1])
     with col1:
         st.subheader("Failure Investigation Decision Tree")
         fig_tree, ax_tree = plt.subplots(figsize=(15, 8))
-        plot_tree(model, feature_names=X.columns, class_names=y.unique(), filled=True, rounded=True, ax=ax_tree, fontsize=10)
+        plot_tree(model, feature_names=X.columns, class_names=sorted(y.unique()), filled=True, rounded=True, ax=ax_tree, fontsize=10)
         st.pyplot(fig_tree)
     with col2:
         st.subheader("Most Important Factors")
