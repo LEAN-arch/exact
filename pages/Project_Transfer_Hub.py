@@ -49,3 +49,18 @@ with col2:
     st.header("Risk Mitigation Plan")
     st.dataframe(risk_df[['Risk ID', 'Description', 'Owner', 'Project', 'Risk_Score']], use_container_width=True, hide_index=True,
         column_config={"Risk_Score": st.column_config.NumberColumn("Score", format="%d 🔥")})
+# pages/Project_Transfer_Hub.py
+# ... (Existing code for page setup, Kanban, and Risk Register) ...
+
+st.divider()
+st.header("Stakeholder Sign-off Matrix")
+st.markdown("Tracking key document approvals across functional teams to ensure alignment.")
+signoff_data = {
+    'Document': ['User Requirements', 'Test Method Validation Plan', 'TMV Report', 'Transfer to QC Plan'],
+    'R&D Lead': ['✔️', '✔️', '✔️', 'N/A'],
+    'Systems Dev': ['✔️', '✔️', 'N/A', '✔️'],
+    'Quality Engineering': ['✔️', '✔️', 'In Review', '✔️'],
+    'QC Operations': ['✔️', '✔️', 'In Review', 'In Review']
+}
+signoff_df = pd.DataFrame(signoff_data)
+st.dataframe(signoff_df, use_container_width=True)
