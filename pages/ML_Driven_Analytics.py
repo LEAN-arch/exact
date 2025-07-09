@@ -33,7 +33,7 @@ with tab1:
         st.error(f"Error loading instrument health data: {e}")
         st.stop()
 
-    col1, col2 = st.columns([2, 1])  # Standardized column ratio
+    col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown("**Instrument Health Score Over Time**")
         fig = px.line(instrument_df, x='Run ID', y='Health Score', title="Health Score (1 - Prob. of Failure)", range_y=[0, 1])
@@ -46,9 +46,8 @@ with tab1:
     st.subheader("Actionable Insight: Why is the latest run's score what it is?")
     st.markdown("This **SHAP Force Plot** provides an intuitive explanation for the most recent prediction. Features in red push the prediction towards failure, while features in blue push it towards health.")
     
-    # Cache SHAP explainer for performance
     @st.cache_resource
-    def get_shap_explainer(_model):  # Underscore to skip hashing
+    def get_shap_explainer(_model):
         return shap.TreeExplainer(_model)
     
     try:
@@ -57,9 +56,7 @@ with tab1:
             shap_values = explainer.shap_values(X)
             last_instance_idx = X.shape[0] - 1
 
-            # Robust class handling for SHAP values
             if isinstance(shap_values, list):
-                # Assume binary classification; select class 1 (failure) based on model classes
                 failure_class_idx = list(model.classes_).index(1) if 1 in model.classes_ else 1
                 base_value = explainer.expected_value[failure_class_idx]
                 shap_vals = shap_values[failure_class_idx][last_instance_idx, :]
@@ -77,7 +74,7 @@ with tab1:
                 text_rotation=10
             )
             st.pyplot(fig)
-            plt.close(fig)  # Prevent memory leakage
+            plt.close(fig)
     except Exception as e:
         st.error(f"Error generating SHAP plot: {e}")
 
@@ -86,26 +83,21 @@ with tab2:
     st.markdown("A neural network is trained on a 'golden batch' of normal data. It learns to reconstruct normal patterns. Anomalies are detected when the **Reconstruction Error** is high.")
 
     try:
-        # Train model on normal data
         golden_df = generate_golden_batch_data()
         autoencoder, scaler = train_autoencoder_model(golden_df)
 
-        # Apply to live data (which includes anomalies)
         live_df = generate_live_qc_data(golden_df)
         X_live_scaled = scaler.transform(live_df.drop('Run', axis=1))
         X_live_pred = autoencoder.predict(X_live_scaled)
         
-        # Calculate reconstruction error
         mae_loss = np.mean(np.abs(X_live_pred - X_live_scaled), axis=1)
         live_df['Reconstruction Error'] = mae_loss
         
-        # Set a dynamic threshold
-        X_train_scaled = scaler.transform(golden_df.drop('Run', axis=1))  # Fix: Drop 'Run' column
+        X_train_scaled = scaler.transform(golden_df.drop('Run', axis=1))
         X_train_pred = autoencoder.predict(X_train_scaled)
         train_mae_loss = np.mean(np.abs(X_train_pred - X_train_scaled), axis=1)
-        threshold = np.mean(train_maeにつなが
+        threshold = np.mean(train_mae_loss) + 3 * np.std(train_mae_loss)  # Fixed: Added closing parenthesis
 
-        # Visualize
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=live_df['Run'], y=live_df['Reconstruction Error'], name='Reconstruction Error'))
         fig.add_hline(y=threshold, line_dash="dot", line_color="red", annotation_text="Anomaly Threshold")
@@ -130,13 +122,13 @@ with tab3:
         rca_df = generate_rca_data()
         model, X, y = train_rca_model(rca_df)
         
-        col1, col2 = st.columns([2, 1])  # Standardized column ratio
+        col1, col2 = st.columns([2, 1])
         with col1:
             st.subheader("Example Decision Logic (from one tree in the forest)")
             fig_tree, ax_tree = plt.subplots(figsize=(15, 8))
             plot_tree(model.estimators_[5], feature_names=X.columns, class_names=sorted(y.unique()), filled=True, rounded=True, ax=ax_tree, fontsize=10)
             st.pyplot(fig_tree)
-            plt.close(fig_tree)  # Prevent memory leakage
+            plt.close(fig_tree)
         with col2:
             st.subheader("Most Important Factors (from the full forest)")
             feature_importance = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values('Importance', ascending=False)
@@ -145,7 +137,6 @@ with tab3:
             age = st.slider("Instrument Age (mo)", 1, 36, 10)
             reagent = st.slider("Reagent Age (days)", 1, 90, 80)
             exp = st.slider("Operator Experience (yr)", 1, 5, 2)
-            # Use DataFrame for prediction to ensure correct feature order
             input_data = pd.DataFrame([[age, reagent, exp]], columns=X.columns)
             prediction = model.predict(input_data)
             st.error(f"**Predicted Root Cause:** {prediction[0]}")
