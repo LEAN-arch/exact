@@ -1,4 +1,4 @@
-```python
+# pages/QMS_CAPA_Tracker.py
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
@@ -9,7 +9,7 @@ import logging
 from utils import generate_capa_source_data
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="QMS & CAPA Tracker", layout="wide")
@@ -148,4 +148,3 @@ try:
 except Exception as e:
     st.error(f"Error rendering document timeline: {e}")
     logger.error(f"Document timeline error: {e}")
-```
