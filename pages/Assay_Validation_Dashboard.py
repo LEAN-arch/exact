@@ -4,10 +4,10 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from utils import generate_linearity_data, generate_precision_data, generate_msa_data, generate_specificity_data
-from scipy.stats import ttest_ind
 import statsmodels.api as sm
 import numpy as np
 import pandas as pd
+from scipy.stats import ttest_ind
 
 st.set_page_config(page_title="Assay Validation Dashboard", layout="wide")
 
@@ -26,9 +26,10 @@ with st.expander("🌐 Regulatory Context & Legend"):
 linearity_df = generate_linearity_data()
 precision_df = generate_precision_data()
 msa_data = generate_msa_data()
+specificity_df = generate_specificity_data()
 
 # --- Page Tabs ---
-tab1, tab2, tab3 = st.tabs(["**Linearity & Accuracy**", "**Measurement System Analysis (MSA)**", "**Precision (Repeatability & Reproducibility)**", "**Specificity & Interference**"])
+tab1, tab2, tab3, tab4 = st.tabs(["**Linearity & Accuracy**", "**Measurement System Analysis (MSA)**", "**Precision**", "**Specificity & Interference**"])
 
 with tab1:
     st.header("Assay Linearity and Bias Analysis")
@@ -154,40 +155,6 @@ with tab3:
     col1, col2 = st.columns(2)
     col1.metric("Within-Run Precision (%CV)", f"{repeatability_cv:.2f}%")
     col2.metric("Total Precision (%CV)", f"{total_precision_cv:.2f}%")
-    with st.expander("📊 **Results & Analysis**"):
-        st.markdown(f"""
-    with st.expander("📊 **Results & Analysis**"):
-            st.markdown(f"""
-            #### Metrics Explained
-            - **Within-Run Precision (%CV)**: Quantifies the tightest possible precision of the assay under ideal conditions.
-            - **Total Precision (%CV)**: Quantifies the expected real-world precision of the assay, accounting for all sources of variability. This is the more critical metric for product claims.
-    
-            #### Analysis of Results
-            - The **Box Plot** provides a visual assessment. We can see that Operator 2's results are consistently higher than Operator 1's, suggesting a minor systematic bias between operators. Additionally, the size of the boxes (interquartile range) appears slightly larger on Day 3, indicating potentially higher variability on that day.
-            - The **Within-Run %CV of {repeatability_cv:.2f}%** and **Total %CV of {total_precision_cv:.2f}%** would be compared against the pre-defined acceptance criteria in the validation plan. For a typical quantitative assay, these values would likely be considered acceptable. The small difference between the two CVs indicates that the between-day and between-operator components of variance are minimal, despite the visual shift.
-            """)""")
-with tab4:
-    st.header("Assay Specificity & Interference Analysis")
-    with st.expander("🔬 **The Experiment & Method**"):
-        st.markdown("""
-        #### The Experiment
-        **Specificity** is the ability of an assay to measure the target analyte exclusively, without signal from other components. This experiment tests the assay's response to blank samples, samples containing only potentially interfering substances, the target analyte alone, and the target analyte "spiked" with the interferents.
-        #### The Method
-        - **Box Plots**: Used to visually compare the signal distributions of the different sample types.
-        - **Two-Sample t-test**: A statistical test used to determine if there is a significant difference between the means of two independent groups. We compare the "Target Only" group to the "Target + Interferents" group.
-        """)
-    
-    specificity_df = generate_specificity_data()
-    fig = px.box(specificity_df, x="Sample Type", y="Signal", color="Sample Type", title="Assay Response to Potential Interferents")
-    st.plotly_chart(fig, use_container_width=True)
-
-    target_only = specificity_df[specificity_df['Sample Type'] == 'Target Only']['Signal']
-    target_with_interferents = specificity_df[specificity_df['Sample Type'] == 'Target + Interferents']['Signal']
-    ttest_res = ttest_ind(target_only, target_with_interferents)
-
-    st.subheader("Statistical Interference Test")
-    st.metric("T-test P-value (Target vs Target + Interferents)", f"{ttest_res.pvalue:.3f}")
-    
 
     with st.expander("📊 **Results & Analysis**"):
         st.markdown(f"""
@@ -199,3 +166,41 @@ with tab4:
         - The **Box Plot** provides a visual assessment. We can see that Operator 2's results are consistently higher than Operator 1's, suggesting a minor systematic bias between operators. Additionally, the size of the boxes (interquartile range) appears slightly larger on Day 3, indicating potentially higher variability on that day.
         - The **Within-Run %CV of {repeatability_cv:.2f}%** and **Total %CV of {total_precision_cv:.2f}%** would be compared against the pre-defined acceptance criteria in the validation plan. For a typical quantitative assay, these values would likely be considered acceptable. The small difference between the two CVs indicates that the between-day and between-operator components of variance are minimal, despite the visual shift.
         """)
+
+with tab4:
+    st.header("Assay Specificity & Interference Analysis")
+    
+    with st.expander("🔬 **The Experiment & Method**"):
+        st.markdown("""
+        #### The Experiment
+        **Specificity** is the ability of an assay to measure the target analyte exclusively, without signal from other components. This experiment tests the assay's response to blank samples, samples containing only potentially interfering substances, the target analyte alone, and the target analyte "spiked" with the interferents.
+        
+        #### The Method
+        - **Box Plots**: Used to visually compare the signal distributions of the different sample types.
+        - **Two-Sample t-test**: A statistical test used to determine if there is a significant difference between the means of two independent groups. We compare the "Target Only" group to the "Target + Interferents" group.
+        """)
+    
+    fig = px.box(specificity_df, x="Sample Type", y="Signal", color="Sample Type", title="Assay Response to Potential Interferents")
+    st.plotly_chart(fig, use_container_width=True)
+
+    target_only = specificity_df[specificity_df['Sample Type'] == 'Target Only']['Signal']
+    target_with_interferents = specificity_df[specificity_df['Sample Type'] == 'Target + Interferents']['Signal']
+    ttest_res = ttest_ind(target_only, target_with_interferents, equal_var=False) # Welch's t-test is more robust
+
+    st.subheader("Statistical Interference Test")
+    st.metric("T-test P-value (Target vs Target + Interferents)", f"{ttest_res.pvalue:.3f}")
+
+    with st.expander("📊 **Results & Analysis**"):
+        st.markdown("""
+        #### Metrics Explained
+        - **P-value**: The probability of observing the measured difference in means (or a more extreme one) between the two groups, assuming there is no real difference (the "null hypothesis"). A small P-value (typically < 0.05) suggests the observed difference is unlikely to be due to random chance alone.
+        
+        #### Analysis of Results
+        - The **Box Plot** shows that the 'Blank' and 'Interferent' samples produce a signal near the baseline, far below the 'Target Only' signal. This demonstrates good basic specificity.
+        - The key comparison is between 'Target Only' and 'Target + Interferents'. Visually, there appears to be a slight suppression of the signal in the presence of interferents.
+        """)
+        if ttest_res.pvalue < 0.05:
+            st.error(f"**P-value of {ttest_res.pvalue:.3f} is less than 0.05.** This indicates a statistically significant difference between the two groups. The interferents are causing a slight but real signal suppression.")
+            st.markdown("**Conclusion & Action:** The assay is impacted by the tested interferents. The magnitude of this interference must be assessed to determine if it is clinically significant. If it is, mitigation strategies like sample dilution or matrix modifications may be required.")
+        else:
+            st.success(f"**P-value of {ttest_res.pvalue:.3f} is greater than 0.05.** There is no statistically significant evidence of interference from the tested substances.")
