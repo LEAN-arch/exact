@@ -27,7 +27,11 @@ with tab1:
     
     try:
         instrument_df = generate_instrument_health_data()
+        if instrument_df.empty or 'Run ID' not in instrument_df.columns:
+            raise ValueError("Instrument data is empty or missing 'Run ID' column")
         model, X = train_instrument_model(instrument_df)
+        if X.empty or not X.select_dtypes(include=[np.number]).columns.tolist():
+            raise ValueError("Feature data (X) is empty or contains no numeric columns")
         instrument_df['Health Score'] = 1 - model.predict_proba(X)[:, 1]
     except Exception as e:
         st.error(f"Error loading instrument health data: {e}")
@@ -56,25 +60,40 @@ with tab1:
             shap_values = explainer.shap_values(X)
             last_instance_idx = X.shape[0] - 1
 
+            # Debug output to diagnose rendering issues
+            st.write(f"Debug: X shape: {X.shape}, SHAP values shape: {np.array(shap_values).shape}, Last instance index: {last_instance_idx}")
+
             if isinstance(shap_values, list):
-                failure_class_idx = list(model.classes_).index(1) if 1 in model.classes_ else 1
+                failure_class_idx = list(model.class_names_).index(1) if 1 in model.classes_ else 1
                 base_value = explainer.expected_value[failure_class_idx]
                 shap_vals = shap_values[failure_class_idx][last_instance_idx, :]
             else:
                 base_value = explainer.expected_value
                 shap_vals = shap_values[last_instance_idx, :]
 
-            fig, ax = plt.subplots()
+            if shap_vals.size == 0 or X.iloc[last_instance_idx, :].empty:
+                raise ValueError("SHAP values or input data for last instance is empty")
+
+            # Explicit figure creation
+            fig = plt.figure(figsize=(10, 4))
             shap.force_plot(
                 base_value,
                 shap_vals,
                 X.iloc[last_instance_idx, :],
+                feature_names=X.columns,
                 matplotlib=True,
                 show=False,
                 text_rotation=10
             )
             st.pyplot(fig)
             plt.close(fig)
+
+            # Fallback: Summary plot if force plot fails to render
+            st.markdown("**Fallback: SHAP Summary Plot** (shown if force plot fails)")
+            fig_summary = plt.figure(figsize=(10, 6))
+            shap.summary_plot(shap_values, X, feature_names=X.columns, show=False)
+            st.pyplot(fig_summary)
+            plt.close(fig_summary)
     except Exception as e:
         st.error(f"Error generating SHAP plot: {e}")
 
@@ -84,9 +103,13 @@ with tab2:
 
     try:
         golden_df = generate_golden_batch_data()
+        if golden_df.empty or 'Run' not in golden_df.columns:
+            raise ValueError("Golden batch data is empty or missing 'Run' column")
         autoencoder, scaler = train_autoencoder_model(golden_df)
 
         live_df = generate_live_qc_data(golden_df)
+        if live_df.empty or 'Run' not in live_df.columns:
+            raise ValueError("Live QC data is empty or missing 'Run' column")
         X_live_scaled = scaler.transform(live_df.drop('Run', axis=1))
         X_live_pred = autoencoder.predict(X_live_scaled)
         
@@ -96,7 +119,7 @@ with tab2:
         X_train_scaled = scaler.transform(golden_df.drop('Run', axis=1))
         X_train_pred = autoencoder.predict(X_train_scaled)
         train_mae_loss = np.mean(np.abs(X_train_pred - X_train_scaled), axis=1)
-        threshold = np.mean(train_mae_loss) + 3 * np.std(train_mae_loss)  # Fixed: Added closing parenthesis
+        threshold = np.mean(train_mae_loss) + 3 * np.std(train_mae_loss)
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=live_df['Run'], y=live_df['Reconstruction Error'], name='Reconstruction Error'))
@@ -120,11 +143,15 @@ with tab3:
     
     try:
         rca_df = generate_rca_data()
+        if rca_df.empty:
+            raise ValueError("RCA data is empty")
         model, X, y = train_rca_model(rca_df)
+        if X.empty or y.empty:
+            raise ValueError("Feature data (X) or target (y) is empty")
         
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.subheader("Example Decision Logic (from one tree in the forest)")
+            st.subheader("Example Decision Микротрубки Logic (from one tree in the forest)")
             fig_tree, ax_tree = plt.subplots(figsize=(15, 8))
             plot_tree(model.estimators_[5], feature_names=X.columns, class_names=sorted(y.unique()), filled=True, rounded=True, ax=ax_tree, fontsize=10)
             st.pyplot(fig_tree)
