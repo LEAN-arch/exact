@@ -38,13 +38,8 @@ with col1:
     st.header("Project Portfolio Gantt Chart")
     st.caption("Visualizing the execution of design transfer activities for all projects.")
     fig = px.timeline(
-        projects_df,
-        x_start="Start Date",
-        x_end="Due Date",
-        y="Project/Assay",
-        color="Current Phase",
-        title="Project Timelines by Phase",
-        hover_name="Project/Assay",
+        projects_df, x_start="Start Date", x_end="Due Date", y="Project/Assay",
+        color="Current Phase", title="Project Timelines by Phase", hover_name="Project/Assay",
         hover_data=["Project Lead", "Overall Status"]
     )
     fig.update_yaxes(categoryorder="total ascending")
@@ -82,6 +77,6 @@ with st.expander("🌐 Regulatory Context & Legend"):
     - **Risk Matrix**: Directly supports the implementation of a **Risk Management** process throughout the product lifecycle as mandated by:
         - **ISO 14971:2019**: *Medical devices — Application of risk management*. The visualization helps in identifying and prioritizing risks for control measures.
         - **21 CFR 820.30(g)**: *Design Risk Analysis* - Requires the identification and evaluation of risks, and ensuring they are mitigated.
+        
     - **Advanced Process Analytics (See ML-Driven Page)**: This dashboard includes an additional page with Machine Learning models. These serve as **investigational and process improvement tools**, aligning with the principles of **ICH Q10 (Pharmaceutical Quality System)**, which encourages a scientific, risk-based approach to continual improvement throughout the product lifecycle. These models supplement, but do not replace, the validated methods required by 21 CFR 820 and ISO 13485.
     """)
-
