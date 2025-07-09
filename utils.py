@@ -7,13 +7,14 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from datetime import date, timedelta
 from scipy import stats
+from scipy.optimize import minimize
 
-# --- MODIFIED: Added GridSearchCV for model optimization ---
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import LabelEncoder
-import shap
+from sklearn.preprocessing import LabelEncoder, PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.inspection import permutation_importance
 
 # --- Custom Plotly Template for Elegance ---
 scientist_template = {
@@ -45,8 +46,6 @@ def generate_project_data():
 
     # --- THIS IS THE CRUCIAL FIX ---
     # Explicitly convert the date columns to pandas datetime objects.
-    # This ensures that subsequent operations (like subtraction) result in a
-    # Series with the correct timedelta64 dtype, which supports the .dt accessor.
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['Due Date'] = pd.to_datetime(df['Due Date'])
 
@@ -117,9 +116,36 @@ def generate_specificity_data():
     data.extend([{'Sample Type': 'Target + Interferents', 'Signal': v} for v in np.random.normal(205, 16, 10)])
     return pd.DataFrame(data)
 
+# --- NEW: DOE/RSM Data Generation ---
+def generate_doe_data():
+    """Generates data simulating a Central Composite Design (CCD)."""
+    np.random.seed(42)
+    temp_levels = [-1.414, -1, -1, 1, 1, -1.414, 1.414, 0, 0, 0, 0, 0]
+    ph_levels   = [0, -1, 1, -1, 1, 0, 0, -1.414, 1.414, 0, 0, 0]
+    temp_real = np.array(temp_levels) * 10 + 60
+    ph_real   = np.array(ph_levels) * 0.5 + 7.5
+    true_yield = 80 + (5*np.array(temp_levels)) + (3*np.array(ph_levels)) - (6*np.array(temp_levels)**2) - (4*np.array(ph_levels)**2) + (2*np.array(temp_levels)*np.array(ph_levels))
+    measured_yield = true_yield + np.random.normal(0, 1.5, len(temp_real))
+    return pd.DataFrame({'Temperature (°C)': temp_real, 'pH': ph_real, 'Yield (%)': measured_yield})
+
+# --- NEW: RSM Model Fitting and Optimization ---
+def fit_rsm_model_and_optimize(df):
+    """Fits a quadratic response surface model and finds the settings for maximum yield."""
+    X = df[['Temperature (°C)', 'pH']]; y = df['Yield (%)']
+    poly = PolynomialFeatures(degree=2, include_bias=False); X_poly = poly.fit_transform(X)
+    model = LinearRegression(); model.fit(X_poly, y)
+    def neg_yield(params):
+        temp, ph = params
+        x_in = pd.DataFrame([[temp, ph]], columns=['Temperature (°C)', 'pH'])
+        x_in_poly = poly.transform(x_in)
+        return -model.predict(x_in_poly)[0]
+    initial_guess = [X['Temperature (°C)'].mean(), X['pH'].mean()]
+    bounds = [(X['Temperature (°C)'].min(), X['Temperature (°C)'].max()), (X['pH'].min(), X['pH'].max())]
+    result = minimize(neg_yield, initial_guess, method='L-BFGS-B', bounds=bounds)
+    opt_settings = result.x; max_yield = -result.fun
+    return model, poly, opt_settings, max_yield
 
 # --- MODIFIED & IMPROVED ML Data and Model Functions ---
-
 def generate_instrument_health_data():
     """MODIFIED: Generates more realistic multivariate time-series data with non-linear drift."""
     np.random.seed(101); runs = 100
@@ -151,7 +177,6 @@ def generate_rca_data():
         elif operator_experience[i] == 1 and np.random.rand() > 0.4: causes.append('Operator Error')
         else: causes.append('No Fault Found')
     return pd.DataFrame({'Instrument Age (mo)': instrument_age, 'Reagent Lot Age (days)': reagent_lot_age, 'Operator Experience (yr)': operator_experience, 'Root Cause': causes})
-
 
 def train_instrument_model(df):
     """MODIFIED: Trains a RandomForest model using GridSearchCV for hyperparameter optimization."""
