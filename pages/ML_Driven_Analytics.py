@@ -41,6 +41,8 @@ with tab1:
         model, X = train_instrument_model(instrument_df)
         if X.empty or not X.select_dtypes(include=[np.number]).columns.tolist():
             raise ValueError("Feature data (X) is empty or contains no numeric columns")
+        # Replace spaces in feature names with underscores
+        X.columns = [col.replace(' ', '_') for col in X.columns]
         instrument_df['Health Score'] = 1 - model.predict_proba(X)[:, 1]
     except Exception as e:
         st.error(f"Error loading instrument health data: {e}")
@@ -99,12 +101,12 @@ with tab1:
             shap.save_html("force_plot.html", force_plot)
             st.components.v1.html(open("force_plot.html").read(), height=400)
 
-            # Fallback: Summary plot
-            st.markdown("**Fallback: SHAP Summary Plot** (shown for additional context)")
-            fig_summary = plt.figure(figsize=(10, 6))
-            shap.summary_plot(shap_values, X, feature_names=X.columns, show=False)
-            st.pyplot(fig_summary)
-            plt.close(fig_summary)
+            # Alternative: Bar plot
+            st.markdown("**Alternative: SHAP Bar Plot** (shown for additional context)")
+            fig_bar = plt.figure(figsize=(10, 6))
+            shap.bar_plot(shap_vals, feature_names=X.columns, max_display=10)
+            st.pyplot(fig_bar)
+            plt.close(fig_bar)
     except Exception as e:
         st.error(f"Error generating SHAP plot: {e}")
         logger.error(f"SHAP plot error: {e}")
@@ -161,6 +163,8 @@ with tab3:
         model, X, y = train_rca_model(rca_df)
         if X.empty or y.empty:
             raise ValueError("Feature data (X) or target (y) is empty")
+        # Replace spaces in feature names with underscores
+        X.columns = [col.replace(' ', '_') for col in X.columns]
         
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -184,4 +188,3 @@ with tab3:
         st.error(f"Error in root cause analysis: {e}")
         logger.error(f"Root cause analysis error: {e}")
 ```
-
