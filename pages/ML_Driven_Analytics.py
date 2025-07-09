@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -99,7 +99,8 @@ with tab1:
                 show=False
             )
             shap.save_html("force_plot.html", force_plot)
-            st.components.v1.html(open("force_plot.html").read(), height=400)
+            with open("force_plot.html", "r", encoding="utf-8") as f:
+                st.components.v1.html(f.read(), height=400)
 
             # Alternative: Bar plot
             st.markdown("**Alternative: SHAP Bar Plot** (shown for additional context)")
