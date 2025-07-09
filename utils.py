@@ -289,3 +289,38 @@ def generate_capa_source_data():
         'Source': ['Out of Specification (OOS)', 'Internal Audit', 'Customer Complaint', 'Process Trend', 'Supplier Issue'],
         'Count': [8, 5, 3, 2, 1]
     }).sort_values('Count', ascending=False)
+
+# utils.py
+
+# (Keep all previous functions from the last correct version)
+# ...
+
+# --- NEW: QC Operations Hub Data Generation ---
+
+def generate_instrument_schedule_data():
+    """Generates a list of events for an instrument schedule timeline."""
+    today = pd.Timestamp.now().normalize()
+    data = [
+        # HPLC-01: In use now
+        {'Instrument': 'HPLC-01', 'Start': today - timedelta(hours=4), 'Finish': today + timedelta(hours=4), 'Status': 'In Use', 'Details': 'Project A - Run 5'},
+        # HPLC-02: Available now, booked later
+        {'Instrument': 'HPLC-02', 'Start': today + timedelta(days=1), 'Finish': today + timedelta(days=1, hours=6), 'Status': 'Scheduled', 'Details': 'Project B - Run 1'},
+        # PCR-01: PM is overdue
+        {'Instrument': 'PCR-01', 'Start': today - timedelta(days=2), 'Finish': today + timedelta(days=1), 'Status': 'PM Due', 'Details': 'Annual preventative maintenance'},
+        # PCR-02: OOS for a few days
+        {'Instrument': 'PCR-02', 'Start': today - timedelta(days=4), 'Finish': today + timedelta(days=3), 'Status': 'Out of Spec', 'Details': 'OOS-123: Temperature out of range'},
+        # Hamilton-01: Booked next week
+        {'Instrument': 'Hamilton-01', 'Start': today + timedelta(days=3), 'Finish': today + timedelta(days=5), 'Status': 'Scheduled', 'Details': 'Method Transfer Validation'},
+    ]
+    return pd.DataFrame(data)
+
+def generate_training_data_for_heatmap():
+    """Generates numerical data for a training matrix heatmap."""
+    data = {
+        'TM-101 (HPLC)': [2, 2, 2, 1],
+        'TM-201 (PCR)': [2, 2, 0, 2],
+        'TM-202 (NGS Lib Prep)': [1, 2, 0, 2],
+        'SOP-001 (Safety)': [2, 2, 2, 2]
+    }
+    df = pd.DataFrame(data, index=['John Doe', 'Jane Smith', 'Peter Jones', 'Susan Chen'])
+    return df
