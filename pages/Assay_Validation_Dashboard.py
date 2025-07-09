@@ -1,10 +1,12 @@
 # pages/Assay_Validation_Dashboard.py
+
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from utils import generate_linearity_data, generate_precision_data, generate_msa_data
 import statsmodels.api as sm
 import numpy as np
+import pandas as pd  # <--- THIS IS THE MISSING LINE THAT IS NOW ADDED
 
 st.set_page_config(page_title="Assay Validation Dashboard", layout="wide")
 
@@ -19,7 +21,10 @@ with st.expander("🌐 Regulatory Context & Legend"):
     - **Best Practices**: The analyses follow principles from **CLSI Guidelines** (e.g., EP05, EP06, EP17).
     """)
 
-linearity_df = generate_linearity_data(); precision_df = generate_precision_data(); msa_data = generate_msa_data()
+linearity_df = generate_linearity_data()
+precision_df = generate_precision_data()
+msa_data = generate_msa_data()
+
 tab1, tab2, tab3 = st.tabs(["**Linearity & Accuracy**", "**Measurement System Analysis (MSA)**", "**Precision (Repeatability & Reproducibility)**"])
 
 with tab1:
@@ -34,7 +39,10 @@ with tab1:
         fig_res.add_hline(y=0, line_dash="dash", line_color="red")
         st.plotly_chart(fig_res, use_container_width=True)
     with col2:
-        st.subheader("Linearity Statistics"); st.metric("R-squared (R²)", f"{model.rsquared:.4f}"); st.metric("Slope", f"{model.params[1]:.3f}"); st.metric("Y-Intercept", f"{model.params[0]:.3f}")
+        st.subheader("Linearity Statistics")
+        st.metric("R-squared (R²)", f"{model.rsquared:.4f}")
+        st.metric("Slope", f"{model.params[1]:.3f}")
+        st.metric("Y-Intercept", f"{model.params[0]:.3f}")
 
 with tab2:
     st.header("Measurement System Analysis (Gage R&R)")
@@ -44,11 +52,14 @@ with tab2:
     ndc = int(1.41 * (np.sqrt(msa_data['part_var']) / np.sqrt(gage_rr_var)))
     col1, col2 = st.columns(2)
     with col1:
+        # This line will now work correctly because `pd` is defined
         msa_plot_df = pd.DataFrame(dict(ids=['Total', 'Part', 'Gage R&R', 'Repeatability', 'Reproducibility'], labels=['Total Var', 'Part-to-Part', 'Gage R&R', 'Repeatability', 'Reproducibility'], parents=['', 'Total', 'Total', 'Gage R&R', 'Gage R&R'], values=[total_var, msa_data['part_var'], gage_rr_var, msa_data['repeatability_var'], msa_data['reproducibility_var']]))
         fig = px.sunburst(msa_plot_df, ids='ids', labels='labels', parents='parents', values='values', title="Hierarchical Sources of Variation", branchvalues='total')
         st.plotly_chart(fig, use_container_width=True)
     with col2:
-        st.subheader("Key MSA Metrics"); st.metric("Gage R&R (% Study Var)", f"{pct_gage_rr:.2f}%"); st.metric("Number of Distinct Categories (ndc)", f"{ndc}")
+        st.subheader("Key MSA Metrics")
+        st.metric("Gage R&R (% Study Var)", f"{pct_gage_rr:.2f}%")
+        st.metric("Number of Distinct Categories (ndc)", f"{ndc}")
 
 with tab3:
     st.header("CLSI EP05-A3 Style Precision Analysis")
