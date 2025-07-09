@@ -6,3 +6,4 @@ scipy
 statsmodels
 scikit-learn
 shap
+matplotlib
