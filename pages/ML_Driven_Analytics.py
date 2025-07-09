@@ -45,7 +45,7 @@ with tab1:
         col1, col2 = st.columns([2, 1.2])
         with col1:
             st.markdown("**Instrument Health Score Over Time**")
-            fig = px.line(instrument_df, x='Run ID', y='Health Score', title="Health Score (1 - Prob. of Failure)", range_y=[0, 1])
+            fig = px.line(instrument_df, x='Run_ID', y='Health Score', title="Health Score (1 - Prob. of Failure)", range_y=[0, 1])
             fig.add_hline(y=0.5, line_dash="dot", line_color="red", annotation_text="Failure Threshold")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
@@ -65,7 +65,7 @@ with tab1:
                 The final predicted value is the sum of the base value and all feature contributions.
             
             #### Analysis of this Specific Run
-            The "Health Score Over Time" plot shows a clear, accelerating decline in instrument health over the last 20 runs. The SHAP Force Plot for the most recent data point reveals **why**. For this simulated data, a high `Pressure (psi)` is the dominant factor pushing the prediction towards failure, counteracted only slightly by a still-acceptable `Flow Rate Stability`. This is a classic signature of a developing column blockage or pump seal failure, providing a clear, actionable direction for the maintenance team *before* a catastrophic failure occurs.
+            The "Health Score Over Time" plot shows a clear, accelerating decline in instrument health over the last 20 runs. The SHAP Force Plot for the most recent data point reveals **why**. For this simulated data, a high `Pressure_psi` is the dominant factor pushing the prediction towards failure, counteracted only slightly by a still-acceptable `Flow_Rate_Stability`. This is a classic signature of a developing column blockage or pump seal failure, providing a clear, actionable direction for the maintenance team *before* a catastrophic failure occurs.
             """)
         
         with st.spinner("Generating SHAP Force Plot..."):
@@ -73,31 +73,24 @@ with tab1:
             shap_values = explainer.shap_values(X)
             last_instance_idx = X.shape[0] - 1
 
-            # --- THIS IS THE DEFINITIVE FIX for the IndexError ---
-            # Check if shap_values is a list (output for 2 classes) or a single array
             if isinstance(shap_values, list):
-                # It's a list, so we have values for both classes. We want class 1 (Failure).
                 shap_values_for_plot = shap_values[1]
-                # Also handle the expected_value which might also be a list
                 if isinstance(explainer.expected_value, list):
                     base_value = explainer.expected_value[1]
-                else: # Fallback for rare cases where it's a scalar
+                else:
                     base_value = explainer.expected_value
             else:
-                # It's already a single numpy array for the positive class.
                 shap_values_for_plot = shap_values
                 base_value = explainer.expected_value
             
-            # Now, use the correctly identified SHAP values array
             shap.force_plot(
                 base_value,
-                shap_values_for_plot[last_instance_idx,:], # Index the correct array
+                shap_values_for_plot[last_instance_idx,:],
                 X.iloc[last_instance_idx,:],
                 matplotlib=True, show=False, text_rotation=10
             )
             st.pyplot(plt.gcf(), bbox_inches='tight')
             plt.clf()
-            # --- END OF FIX ---
 
     except Exception as e:
         st.error(f"Error loading or plotting instrument health data: {e}")
@@ -122,7 +115,6 @@ with tab2:
         autoencoder, scaler = train_autoencoder_model(golden_df)
         live_df = generate_live_qc_data(golden_df)
         
-        # Ensure the live data has the same columns in the same order as the training data
         X_live_scaled = scaler.transform(live_df[golden_df.columns])
         X_live_pred = autoencoder.predict(X_live_scaled)
         
@@ -186,7 +178,11 @@ with tab3:
             age = st.slider("Instrument Age (mo)", 1, 36, 10)
             reagent = st.slider("Reagent Age (days)", 1, 90, 80)
             exp = st.slider("Operator Experience (yr)", 1, 5, 2)
-            prediction = model.predict([[age, reagent, exp]])
+            
+            # DEFINITIVE FIX for the UserWarning about feature names
+            input_data = pd.DataFrame([[age, reagent, exp]], columns=X.columns)
+            prediction = model.predict(input_data)
+            
             st.error(f"**Predicted Root Cause:** {prediction[0]}")
 
         with st.expander("📊 **Results & Analysis**"):
