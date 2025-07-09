@@ -15,10 +15,6 @@ st.set_page_config(page_title="ML-Driven Analytics", layout="wide")
 st.title("🤖 ML-Driven Process Analytics")
 st.markdown("### Advanced analytics for proactive process control and deep insights.")
 
-# Regulatory compliance acknowledgment
-if not st.checkbox("I acknowledge that this tool is for investigational use only per 21 CFR 820 and ISO 13485."):
-    st.stop()
-
 with st.expander("⚠️ Important Disclaimer & Regulatory Context"):
     st.warning("""
     The models on this page are for **investigational use only**. They are designed to provide insights, accelerate troubleshooting, and guide process improvement activities. They do not replace validated QC procedures, SPC rules, or formal CAPA investigations required by **21 CFR 820** and **ISO 13485**.
@@ -52,8 +48,8 @@ with tab1:
     
     # Cache SHAP explainer for performance
     @st.cache_resource
-    def get_shap_explainer(model):
-        return shap.TreeExplainer(model)
+    def get_shap_explainer(_model):  # Underscore to skip hashing
+        return shap.TreeExplainer(_model)
     
     try:
         with st.spinner("Generating SHAP Force Plot..."):
@@ -107,7 +103,7 @@ with tab2:
         X_train_scaled = scaler.transform(golden_df.drop('Run', axis=1))  # Fix: Drop 'Run' column
         X_train_pred = autoencoder.predict(X_train_scaled)
         train_mae_loss = np.mean(np.abs(X_train_pred - X_train_scaled), axis=1)
-        threshold = np.mean(train_mae_loss) + 3 * np.std(train_mae_loss)
+        threshold = np.mean(train_maeにつなが
 
         # Visualize
         fig = go.Figure()
@@ -149,7 +145,7 @@ with tab3:
             age = st.slider("Instrument Age (mo)", 1, 36, 10)
             reagent = st.slider("Reagent Age (days)", 1, 90, 80)
             exp = st.slider("Operator Experience (yr)", 1, 5, 2)
-            # Fix: Use DataFrame for prediction to ensure correct feature order
+            # Use DataFrame for prediction to ensure correct feature order
             input_data = pd.DataFrame([[age, reagent, exp]], columns=X.columns)
             prediction = model.predict(input_data)
             st.error(f"**Predicted Root Cause:** {prediction[0]}")
