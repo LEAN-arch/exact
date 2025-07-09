@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from utils import generate_spc_data, generate_lot_data, detect_westgard_rules
 from scipy.stats import f_oneway
+from utils import calculate_cpk
 
 st.set_page_config(page_title="QC Performance Analytics", layout="wide")
 st.title("📊 QC Performance & Analytics Dashboard")
@@ -113,3 +114,33 @@ with col2:
             st.markdown("""
             **Conclusion & Action:** The new reagent lot performs equivalently to the reference lots. It passes the incoming acceptance criteria and can be released for use in production.
             """)
+st.divider()
+st.header("Process Capability Analysis (Cpk)")
+with st.expander("🔬 **The Method & Metrics**"):
+    st.markdown("""
+    #### The Method
+    **Process Capability** analysis determines how well a process, in a state of statistical control, is able to meet its specification limits. The **Process Capability Index (Cpk)** is a standard metric used to quantify this.
+    #### The Metric: Cpk
+    Cpk measures how close you are to your target and how consistent you are to around your average performance. A higher Cpk value indicates a more capable process (less likely to produce out-of-spec results).
+    - **Cpk > 1.33**: Generally considered capable for most processes.
+    - **1.0 < Cpk < 1.33**: Marginally capable; may require tighter control.
+    - **Cpk < 1.0**: Not capable; the process is producing defects.
+    """)
+
+# Use the same data as the SPC chart for this example
+lsl = 95 # Lower Specification Limit
+usl = 105 # Upper Specification Limit
+
+cpk_value = calculate_cpk(spc_df['Value'], usl, lsl)
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Lower Spec Limit (LSL)", f"{lsl}")
+col2.metric("Upper Spec Limit (USL)", f"{usl}")
+col3.metric("Process Capability (Cpk)", f"{cpk_value:.2f}")
+
+if cpk_value < 1.0:
+    st.error("Process is NOT CAPABLE of meeting specifications.")
+elif cpk_value < 1.33:
+    st.warning("Process is MARGINALLY CAPABLE. Improvements to reduce variability are recommended.")
+else:
+    st.success("Process is CAPABLE of meeting specifications.")
