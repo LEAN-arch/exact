@@ -30,8 +30,9 @@ scientist_template = {
 pio.templates["scientist"] = scientist_template
 pio.templates.default = "scientist"
 
-# --- Core Data Generation Functions (Unchanged) ---
+# --- Core Data Generation Functions ---
 def generate_project_data():
+    """MODIFIED: Ensures date columns have the correct datetime64 dtype to prevent errors."""
     data = {
         'Project/Assay': ['NGS-Assay-X', 'RT-PCR-Assay-Y', 'HPLC-Method-Z', 'QC-LIMS-Script-A'],
         'Project Lead': ['S. Scientist', 'S. Scientist', 'J. Doe', 'S. Scientist'],
@@ -40,7 +41,16 @@ def generate_project_data():
         'Start Date': [date.today() - timedelta(days=45), date.today() - timedelta(days=20), date.today() - timedelta(days=90), date.today() - timedelta(days=5)],
         'Due Date': [date.today() + timedelta(days=14), date.today() + timedelta(days=25), date.today() - timedelta(days=30), date.today() + timedelta(days=40)],
     }
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+
+    # --- THIS IS THE CRUCIAL FIX ---
+    # Explicitly convert the date columns to pandas datetime objects.
+    # This ensures that subsequent operations (like subtraction) result in a
+    # Series with the correct timedelta64 dtype, which supports the .dt accessor.
+    df['Start Date'] = pd.to_datetime(df['Start Date'])
+    df['Due Date'] = pd.to_datetime(df['Due Date'])
+
+    return df
 
 def generate_risk_data():
     data = {
@@ -62,7 +72,6 @@ def generate_linearity_data():
     return pd.DataFrame({'Expected Concentration': expected, 'Observed Signal': observed})
 
 def generate_precision_data():
-    # ... (remains the same) ...
     days = ['Day 1', 'Day 2', 'Day 3']; operators = ['Op 1', 'Op 2']; data = []
     for day in days:
         for op in operators:
@@ -72,17 +81,17 @@ def generate_precision_data():
     return pd.DataFrame(data)
 
 def generate_msa_data(): return {'part_var': 95.2, 'repeatability_var': 2.8, 'reproducibility_var': 2.0}
-def generate_spc_data(): # ... (remains the same) ...
+def generate_spc_data():
     np.random.seed(42); data = np.random.normal(loc=100, scale=1.5, size=30); data[10] = 104; data[11] = 103.5; data[15] = 105.1; data[20:24] = [102.5, 102.8, 103.1, 103.5]
     return pd.DataFrame({'Value': data, 'Run': range(1, 31)})
-def generate_lot_data(): # ... (remains the same) ...
+def generate_lot_data():
     np.random.seed(0); lots = ['Lot A', 'Lot B', 'Lot C (New)', 'Lot D']; data = []
     for lot in lots:
         mean = 104 if lot == 'Lot C (New)' else 100; values = np.random.normal(loc=mean, scale=1.5, size=20)
         for val in values: data.append({'Lot ID': lot, 'Performance Metric': val})
     return pd.DataFrame(data)
 
-def detect_westgard_rules(df, value_col='Value'): # ... (remains the same) ...
+def detect_westgard_rules(df, value_col='Value'):
     mean = df[value_col].mean(); std = df[value_col].std(); violations = []
     for i in range(len(df)):
         val = df.loc[i, value_col]
@@ -100,16 +109,11 @@ def detect_westgard_rules(df, value_col='Value'): # ... (remains the same) ...
 # --- NEW: Specificity/Interference Data Generation ---
 def generate_specificity_data():
     """Generates data for an assay specificity and interference study."""
-    np.random.seed(33)
-    data = []
-    # Baseline noise (blank)
+    np.random.seed(33); data = []
     data.extend([{'Sample Type': 'Blank', 'Signal': v} for v in np.random.normal(10, 2, 10)])
-    # Target analyte signal
     data.extend([{'Sample Type': 'Target Only', 'Signal': v} for v in np.random.normal(200, 15, 10)])
-    # Potential interferents
     data.extend([{'Sample Type': 'Interferent A', 'Signal': v} for v in np.random.normal(12, 3, 10)])
     data.extend([{'Sample Type': 'Interferent B', 'Signal': v} for v in np.random.normal(15, 4, 10)])
-    # Target + Interferents (to test for signal suppression or enhancement)
     data.extend([{'Sample Type': 'Target + Interferents', 'Signal': v} for v in np.random.normal(205, 16, 10)])
     return pd.DataFrame(data)
 
@@ -119,26 +123,15 @@ def generate_specificity_data():
 def generate_instrument_health_data():
     """MODIFIED: Generates more realistic multivariate time-series data with non-linear drift."""
     np.random.seed(101); runs = 100
-    # Simulate cyclical wear and random noise
-    base_pressure = 1500 + 15 * np.sin(np.linspace(0, 3 * np.pi, runs))
-    pressure = base_pressure + np.random.normal(0, 5, runs)
-    
-    base_temp = 35 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, runs))
-    temperature = base_temp + np.random.normal(0, 0.1, runs)
-    
-    # Introduce a sharper, non-linear degradation drift towards the end
-    drift = np.exp(np.linspace(0, 2.5, 20))
-    pressure[80:] += drift * 2
-    temperature[80:] += drift / 10
-    
-    flow_rate_stability = np.random.normal(0.99, 0.005, runs)
-    flow_rate_stability[85:] -= np.logspace(-3, -1.5, 15)
-    
+    base_pressure = 1500 + 15 * np.sin(np.linspace(0, 3 * np.pi, runs)); pressure = base_pressure + np.random.normal(0, 5, runs)
+    base_temp = 35 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, runs)); temperature = base_temp + np.random.normal(0, 0.1, runs)
+    drift = np.exp(np.linspace(0, 2.5, 20)); pressure[80:] += drift * 2; temperature[80:] += drift / 10
+    flow_rate_stability = np.random.normal(0.99, 0.005, runs); flow_rate_stability[85:] -= np.logspace(-3, -1.5, 15)
     df = pd.DataFrame({'Run ID': range(runs), 'Pressure (psi)': pressure, 'Column Temp (°C)': temperature, 'Flow Rate Stability': flow_rate_stability})
     df['Failure'] = 0; df.loc[90:, 'Failure'] = 1
     return df
 
-def generate_multivariate_qc_data(): # ... (remains the same) ...
+def generate_multivariate_qc_data():
     np.random.seed(42); data = []
     for i in range(100):
         op = 'Operator A' if i % 2 == 0 else 'Operator B'; lot = 'Lot X' if i < 50 else 'Lot Y'
@@ -149,7 +142,7 @@ def generate_multivariate_qc_data(): # ... (remains the same) ...
     df = pd.DataFrame(data); df.loc[80, 'Value'] -= 3; df.loc[80, 'Operator'] = 'Operator B'
     return df
 
-def generate_rca_data(): # ... (remains the same) ...
+def generate_rca_data():
     np.random.seed(0); n_samples = 200; instrument_age = np.random.randint(1, 36, n_samples)
     reagent_lot_age = np.random.randint(1, 90, n_samples); operator_experience = np.random.randint(1, 5, n_samples); causes = []
     for i in range(n_samples):
@@ -163,26 +156,14 @@ def generate_rca_data(): # ... (remains the same) ...
 def train_instrument_model(df):
     """MODIFIED: Trains a RandomForest model using GridSearchCV for hyperparameter optimization."""
     X = df[['Pressure (psi)', 'Column Temp (°C)', 'Flow Rate Stability']]; y = df['Failure']
-    
-    # Define the parameter grid to search
-    param_grid = {
-        'n_estimators': [50, 100, 150],
-        'max_depth': [None, 10, 20],
-        'min_samples_leaf': [1, 2, 4]
-    }
-    
-    # Set up GridSearchCV
+    param_grid = {'n_estimators': [50, 100, 150], 'max_depth': [None, 10, 20], 'min_samples_leaf': [1, 2, 4]}
     rf = RandomForestClassifier(random_state=42)
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, scoring='roc_auc')
-    
-    # Fit the model
     grid_search.fit(X, y)
-    
-    # Return the best model and the feature matrix X
     best_model = grid_search.best_estimator_
     return best_model, X, grid_search.best_params_
 
-def train_anomaly_model(df): # ... (remains the same) ...
+def train_anomaly_model(df):
     le_op = LabelEncoder(); le_lot = LabelEncoder()
     df_encoded = df.copy()
     df_encoded['Operator'] = le_op.fit_transform(df_encoded['Operator'])
@@ -193,20 +174,9 @@ def train_anomaly_model(df): # ... (remains the same) ...
 def train_rca_model(df):
     """MODIFIED: Trains a DecisionTree model using GridSearchCV."""
     X = df.drop('Root Cause', axis=1); y = df['Root Cause']
-    
-    # Define the parameter grid
-    param_grid = {
-        'criterion': ['gini', 'entropy'],
-        'max_depth': [3, 4, 5, 6],
-        'min_samples_split': [2, 5, 10]
-    }
-    
-    # Set up GridSearchCV
+    param_grid = {'criterion': ['gini', 'entropy'], 'max_depth': [3, 4, 5, 6], 'min_samples_split': [2, 5, 10]}
     dt = DecisionTreeClassifier(random_state=42)
     grid_search = GridSearchCV(estimator=dt, param_grid=param_grid, cv=5, n_jobs=-1)
-    
     grid_search.fit(X, y)
-    
-    # Return the best model
     best_model = grid_search.best_estimator_
     return best_model, X, y, grid_search.best_params_
