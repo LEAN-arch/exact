@@ -243,10 +243,6 @@ def calculate_cpk(data_series, usl, lsl):
     cpu = (usl - mean) / (3 * std_dev)
     cpl = (mean - lsl) / (3 * std_dev)
     return min(cpu, cpl)
-# utils.py
-
-# (Keep all previous functions from the last correct version)
-# ...
 
 # --- NEW: Software V&V Data Generation ---
 
