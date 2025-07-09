@@ -3,7 +3,8 @@
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from utils import generate_linearity_data, generate_precision_data, generate_msa_data
+from utils import generate_linearity_data, generate_precision_data, generate_msa_data, generate_specificity_data
+from scipy.stats import ttest_ind
 import statsmodels.api as sm
 import numpy as np
 import pandas as pd
@@ -27,7 +28,7 @@ precision_df = generate_precision_data()
 msa_data = generate_msa_data()
 
 # --- Page Tabs ---
-tab1, tab2, tab3 = st.tabs(["**Linearity & Accuracy**", "**Measurement System Analysis (MSA)**", "**Precision (Repeatability & Reproducibility)**"])
+tab1, tab2, tab3 = st.tabs(["**Linearity & Accuracy**", "**Measurement System Analysis (MSA)**", "**Precision (Repeatability & Reproducibility)**", "**Specificity & Interference**"])
 
 with tab1:
     st.header("Assay Linearity and Bias Analysis")
@@ -153,6 +154,40 @@ with tab3:
     col1, col2 = st.columns(2)
     col1.metric("Within-Run Precision (%CV)", f"{repeatability_cv:.2f}%")
     col2.metric("Total Precision (%CV)", f"{total_precision_cv:.2f}%")
+    with st.expander("📊 **Results & Analysis**"):
+        st.markdown(f"""
+    with st.expander("📊 **Results & Analysis**"):
+            st.markdown(f"""
+            #### Metrics Explained
+            - **Within-Run Precision (%CV)**: Quantifies the tightest possible precision of the assay under ideal conditions.
+            - **Total Precision (%CV)**: Quantifies the expected real-world precision of the assay, accounting for all sources of variability. This is the more critical metric for product claims.
+    
+            #### Analysis of Results
+            - The **Box Plot** provides a visual assessment. We can see that Operator 2's results are consistently higher than Operator 1's, suggesting a minor systematic bias between operators. Additionally, the size of the boxes (interquartile range) appears slightly larger on Day 3, indicating potentially higher variability on that day.
+            - The **Within-Run %CV of {repeatability_cv:.2f}%** and **Total %CV of {total_precision_cv:.2f}%** would be compared against the pre-defined acceptance criteria in the validation plan. For a typical quantitative assay, these values would likely be considered acceptable. The small difference between the two CVs indicates that the between-day and between-operator components of variance are minimal, despite the visual shift.
+            """)""")
+with tab4:
+    st.header("Assay Specificity & Interference Analysis")
+    with st.expander("🔬 **The Experiment & Method**"):
+        st.markdown("""
+        #### The Experiment
+        **Specificity** is the ability of an assay to measure the target analyte exclusively, without signal from other components. This experiment tests the assay's response to blank samples, samples containing only potentially interfering substances, the target analyte alone, and the target analyte "spiked" with the interferents.
+        #### The Method
+        - **Box Plots**: Used to visually compare the signal distributions of the different sample types.
+        - **Two-Sample t-test**: A statistical test used to determine if there is a significant difference between the means of two independent groups. We compare the "Target Only" group to the "Target + Interferents" group.
+        """)
+    
+    specificity_df = generate_specificity_data()
+    fig = px.box(specificity_df, x="Sample Type", y="Signal", color="Sample Type", title="Assay Response to Potential Interferents")
+    st.plotly_chart(fig, use_container_width=True)
+
+    target_only = specificity_df[specificity_df['Sample Type'] == 'Target Only']['Signal']
+    target_with_interferents = specificity_df[specificity_df['Sample Type'] == 'Target + Interferents']['Signal']
+    ttest_res = ttest_ind(target_only, target_with_interferents)
+
+    st.subheader("Statistical Interference Test")
+    st.metric("T-test P-value (Target vs Target + Interferents)", f"{ttest_res.pvalue:.3f}")
+    
 
     with st.expander("📊 **Results & Analysis**"):
         st.markdown(f"""
