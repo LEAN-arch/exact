@@ -243,3 +243,46 @@ def calculate_cpk(data_series, usl, lsl):
     cpu = (usl - mean) / (3 * std_dev)
     cpl = (mean - lsl) / (3 * std_dev)
     return min(cpu, cpl)
+# utils.py
+
+# (Keep all previous functions from the last correct version)
+# ...
+
+# --- NEW: Software V&V Data Generation ---
+
+def generate_v_model_data():
+    """Returns coordinates and labels for drawing a V-Model diagram."""
+    data = {
+        'x': [1, 2, 3, 4, 5, 6, 7, 8],
+        'y': [4, 3, 2, 1, 1, 2, 3, 4],
+        'text': [
+            "User Requirements<br>(URS)", "System Design<br>(SDS)", "Architectural Design", "Module Design",
+            "Coding", "Unit Testing", "Integration Testing", "System & Acceptance<br>Testing (V&V)"
+        ]
+    }
+    return pd.DataFrame(data)
+
+def generate_traceability_data():
+    """Generates data for a requirements traceability matrix."""
+    return {
+        'User Need (URS)': ['URS-01: Must calculate final concentration', 'URS-02: Must flag failing samples', 'URS-03: Must generate a PDF report', 'URS-04: Must log all user actions'],
+        'Functional Spec (FRS)': ['FRS-01.1', 'FRS-02.1', 'FRS-03.1, FRS-03.2', 'FRS-04.1'],
+        'Test Case ID': ['TC-001, TC-002', 'TC-003', 'TC-004', 'TC-005'],
+        'Test Status': ['Pass', 'Pass', 'Fail', 'In Progress']
+    }
+
+def generate_defect_trend_data():
+    """Generates time-series data for a defect burnup/burndown chart."""
+    np.random.seed(42)
+    dates = pd.to_datetime(pd.date_range(start="2024-06-01", periods=30, freq='D'))
+    opened = np.random.randint(0, 4, size=30).cumsum() + 5
+    closed = (opened * np.random.uniform(0.5, 0.9, size=30)).astype(int)
+    closed[20:] = np.clip(closed[20:] + 5, 0, opened[20:]) # Simulate a push to close bugs
+    return pd.DataFrame({'Date': dates, 'Opened': opened, 'Closed': closed})
+
+def generate_defect_category_data():
+    """Generates data for a defect Pareto chart."""
+    return pd.DataFrame({
+        'Category': ['UI/UX', 'Calculation Engine', 'Reporting', 'Data Handling', 'Performance'],
+        'Count': [12, 7, 5, 3, 1]
+    }).sort_values('Count', ascending=False)
