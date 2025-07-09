@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from utils import (generate_v_model_data, generate_traceability_data,
+from utils import (generate_traceability_data,
                    generate_defect_trend_data, generate_defect_category_data)
 
 st.set_page_config(page_title="Software V&V Dashboard", layout="wide")
@@ -37,7 +37,7 @@ st.divider()
 
 # --- 2. V-Model and Traceability ---
 st.header("2. Development Lifecycle & Traceability")
-col1, col2 = st.columns([1, 1.5])
+col1, col2 = st.columns([1.2, 1.5]) # Adjusted column ratio for better visual balance
 
 with col1:
     st.subheader("SDLC V-Model")
@@ -48,19 +48,78 @@ with col1:
         - The right side represents the **testing and integration** phases (Verification & Validation).
         - Each level on the right side directly **verifies or validates** the corresponding level on the left. For example, Unit Testing verifies the Module Design, while Acceptance Testing validates the User Requirements. This structure ensures that testing is planned in parallel with development and that every requirement is tested.
         """)
-    v_model_df = generate_v_model_data()
+    
+    # --- START OF NEW V-MODEL PLOT CODE ---
     fig_v = go.Figure()
-    fig_v.add_trace(go.Scatter(x=v_model_df['x'], y=v_model_df['y'], mode='lines', line=dict(color='royalblue', width=3)))
-    fig_v.add_trace(go.Scatter(
-        x=v_model_df['x'], y=v_model_df['y'], mode='markers+text',
-        marker=dict(color='aliceblue', size=80, symbol='square', line=dict(color='royalblue', width=2)),
-        text=v_model_df['text'], textposition="middle center", textfont=dict(size=12)
-    ))
-    fig_v.add_annotation(x=2.5, y=3.5, text="<b>Validation<br>(Are we building the right product?)</b>", showarrow=False, font=dict(color='grey'))
-    fig_v.add_annotation(x=6.5, y=3.5, text="<b>Verification<br>(Are we building the product right?)</b>", showarrow=False, font=dict(color='grey'))
-    fig_v.update_layout(showlegend=False, height=500, margin=dict(l=20, r=20, b=20, t=20))
-    fig_v.update_xaxes(visible=False); fig_v.update_yaxes(visible=False)
+
+    # Define node positions, text, and colors based on the image
+    nodes = {
+        'Requirements': {'pos': [1.5, 4], 'color': '#B4C6E7', 'border': '#2E5A8F'},
+        'Analysis and architecture': {'pos': [2.5, 3], 'color': '#F8CBAD', 'border': '#C55A11'},
+        'Design': {'pos': [3.5, 2], 'color': '#D9D9D9', 'border': '#595959'},
+        'Coding, prototyping...': {'pos': [4.5, 1], 'color': '#D9D9D9', 'border': '#595959'},
+        'Unit, model and subsystem tests': {'pos': [5.5, 2], 'color': '#D9D9D9', 'border': '#595959'},
+        'Integration tests': {'pos': [6.5, 3], 'color': '#F8CBAD', 'border': '#C55A11'},
+        'Acceptance tests': {'pos': [7.5, 4], 'color': '#B4C6E7', 'border': '#2E5A8F'},
+    }
+    
+    # Add nodes (as annotations with boxes)
+    for name, attrs in nodes.items():
+        fig_v.add_annotation(
+            x=attrs['pos'][0], y=attrs['pos'][1], text=name.replace('...', 'and engineering model'),
+            showarrow=False,
+            bgcolor=attrs['color'], bordercolor=attrs['border'], borderwidth=2,
+            font=dict(size=11), align="center"
+        )
+
+    # Add diagonal connecting arrows (as annotations)
+    arrows_diag = [
+        ('Requirements', 'Analysis and architecture'), ('Analysis and architecture', 'Design'),
+        ('Design', 'Coding, prototyping...'), ('Coding, prototyping...', 'Unit, model and subsystem tests'),
+        ('Unit, model and subsystem tests', 'Integration tests'), ('Integration tests', 'Acceptance tests')
+    ]
+    for start, end in arrows_diag:
+        fig_v.add_annotation(
+            x=nodes[end]['pos'][0], y=nodes[end]['pos'][1],
+            ax=nodes[start]['pos'][0], ay=nodes[start]['pos'][1],
+            xref="x", yref="y", axref="x", ayref="y",
+            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.5, arrowcolor='#595959'
+        )
+    
+    # Add thick horizontal Verification/Validation arrows
+    h_arrows = [
+        {'y': 4, 'text': '<b>Validation</b>'},
+        {'y': 3, 'text': '<b>Verification</b>'},
+        {'y': 2, 'text': '<b>Verification</b>'}
+    ]
+    for arrow in h_arrows:
+        y_pos = arrow['y']
+        # Right-pointing arrow
+        fig_v.add_annotation(x=6, y=y_pos, ax=3, ay=y_pos, arrowhead=2, arrowsize=2.5, arrowwidth=5, arrowcolor='#2E5A8F')
+        # Left-pointing arrow
+        fig_v.add_annotation(x=3, y=y_pos, ax=6, ay=y_pos, arrowhead=2, arrowsize=2.5, arrowwidth=5, arrowcolor='#2E5A8F')
+        # Text label
+        fig_v.add_annotation(x=4.5, y=y_pos + 0.2, text=arrow['text'], showarrow=False, font=dict(size=12))
+
+    # Add vertical dashed phase lines
+    phases = {
+        'Concept<br>Phase': 1, 'Preliminary<br>Design Phase': 2, 'Critical<br>Design Phase': 4,
+        'Integration and<br>Test Phase': 6, 'Release or<br>Production Phase': 8
+    }
+    for name, x_pos in phases.items():
+        fig_v.add_vline(x=x_pos, line_width=2, line_dash="dash", line_color="gray")
+        fig_v.add_annotation(x=x_pos, y=4.8, text=f'<b>{name}</b>', showarrow=False, textangle=0, xanchor='center')
+
+    # Update layout to be clean and match the image
+    fig_v.update_layout(
+        showlegend=False, height=550, margin=dict(l=0, r=0, b=0, t=60),
+        xaxis=dict(range=[0.5, 8.5], visible=False),
+        yaxis=dict(range=[0.5, 5], visible=False),
+        plot_bgcolor='white' # Set background to white
+    )
+    # --- END OF NEW V-MODEL PLOT CODE ---
     st.plotly_chart(fig_v, use_container_width=True)
+
 
 with col2:
     st.subheader("Requirements Traceability Matrix")
@@ -81,7 +140,7 @@ with col2:
         if val == 'Fail': return 'background-color: #dc3545; color: white;'
         if val == 'In Progress': return 'background-color: #ffc107; color: black;'
         return ''
-    st.dataframe(req_df.style.applymap(style_status, subset=['Test Status']), use_container_width=True, height=500)
+    st.dataframe(req_df.style.applymap(style_status, subset=['Test Status']), use_container_width=True, height=550)
 
 st.divider()
 
