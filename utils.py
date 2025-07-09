@@ -125,3 +125,109 @@ def detect_westgard_rules(df, value_col='Value'):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '4_1s'})
     
     return pd.DataFrame(violations).drop_duplicates(subset=['Run'])
+    # utils.py
+# (Keep all previous functions: generate_project_data, generate_risk_data, etc.)
+
+# --- NEW ML-SPECIFIC LIBRARIES ---
+from sklearn.ensemble import RandomForestClassifier, IsolationForest
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import shap
+
+# --- NEW ML DATA GENERATION ---
+
+def generate_instrument_health_data():
+    """Generates multivariate time-series data for an instrument (e.g., HPLC)."""
+    np.random.seed(101)
+    runs = 100
+    pressure = np.linspace(1500, 1550, runs) + np.random.normal(0, 5, runs)
+    temperature = np.linspace(35, 35.5, runs) + np.random.normal(0, 0.1, runs)
+    # Introduce a drift leading to failure
+    pressure[80:] += np.linspace(0, 50, 20)
+    temperature[80:] += np.linspace(0, 1.5, 20)
+    flow_rate_stability = np.random.normal(0.99, 0.005, runs)
+    flow_rate_stability[85:] -= np.linspace(0, 0.05, 15)
+    
+    df = pd.DataFrame({
+        'Run ID': range(runs),
+        'Pressure (psi)': pressure,
+        'Column Temp (°C)': temperature,
+        'Flow Rate Stability': flow_rate_stability
+    })
+    # Failure is defined as the last 10 runs
+    df['Failure'] = 0
+    df.loc[90:, 'Failure'] = 1
+    return df
+
+def generate_multivariate_qc_data():
+    """Generates QC data with multiple correlated factors."""
+    np.random.seed(42)
+    data = []
+    for i in range(100):
+        op = 'Operator A' if i % 2 == 0 else 'Operator B'
+        lot = 'Lot X' if i < 50 else 'Lot Y'
+        val = np.random.normal(100, 2)
+        # Introduce subtle shifts
+        if op == 'Operator B': val += 0.5
+        if lot == 'Lot Y': val += 0.7
+        data.append({'Run': i, 'Operator': op, 'Reagent Lot': lot, 'Value': val})
+    df = pd.DataFrame(data)
+    # Add a clear anomaly that univariate rules might miss
+    df.loc[80, 'Value'] -= 3
+    df.loc[80, 'Operator'] = 'Operator B' # The combination is anomalous
+    return df
+
+def generate_rca_data():
+    """Generates historical failure data for root cause analysis."""
+    np.random.seed(0)
+    n_samples = 200
+    instrument_age = np.random.randint(1, 36, n_samples)
+    reagent_lot_age = np.random.randint(1, 90, n_samples)
+    operator_experience = np.random.randint(1, 5, n_samples)
+    causes = []
+    for i in range(n_samples):
+        if reagent_lot_age[i] > 75 or (reagent_lot_age[i] > 60 and np.random.rand() > 0.3):
+            causes.append('Reagent Degradation')
+        elif instrument_age[i] > 30 or (instrument_age[i] > 20 and np.random.rand() > 0.5):
+            causes.append('Instrument Drift')
+        elif operator_experience[i] == 1 and np.random.rand() > 0.4:
+            causes.append('Operator Error')
+        else:
+            causes.append('No Fault Found')
+    return pd.DataFrame({
+        'Instrument Age (mo)': instrument_age,
+        'Reagent Lot Age (days)': reagent_lot_age,
+        'Operator Experience (yr)': operator_experience,
+        'Root Cause': causes
+    })
+
+# --- NEW ML MODEL TRAINING FUNCTIONS ---
+
+def train_instrument_model(df):
+    """Trains a RandomForest model to predict instrument failure."""
+    X = df[['Pressure (psi)', 'Column Temp (°C)', 'Flow Rate Stability']]
+    y = df['Failure']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    return model, X
+
+def train_anomaly_model(df):
+    """Trains an IsolationForest model for anomaly detection."""
+    le_op = LabelEncoder()
+    le_lot = LabelEncoder()
+    df_encoded = df.copy()
+    df_encoded['Operator'] = le_op.fit_transform(df_encoded['Operator'])
+    df_encoded['Reagent Lot'] = le_lot.fit_transform(df_encoded['Reagent Lot'])
+    model = IsolationForest(contamination=0.02, random_state=42) # Expect 2% anomalies
+    model.fit(df_encoded[['Operator', 'Reagent Lot', 'Value']])
+    return model, df_encoded
+
+def train_rca_model(df):
+    """Trains a DecisionTree model for root cause analysis."""
+    X = df.drop('Root Cause', axis=1)
+    y = df['Root Cause']
+    model = DecisionTreeClassifier(max_depth=3, random_state=42)
+    model.fit(X, y)
+    return model, X, y
