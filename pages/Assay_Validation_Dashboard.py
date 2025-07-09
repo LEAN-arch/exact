@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from utils import generate_linearity_data, generate_precision_data, generate_msa_data
 import statsmodels.api as sm
 import numpy as np
-import pandas as pd  # <--- THIS IS THE MISSING LINE THAT IS NOW ADDED
+import pandas as pd
 
 st.set_page_config(page_title="Assay Validation Dashboard", layout="wide")
 
@@ -50,12 +50,44 @@ with tab2:
     gage_rr_var = msa_data['repeatability_var'] + msa_data['reproducibility_var']
     pct_gage_rr = (gage_rr_var / total_var) * 100
     ndc = int(1.41 * (np.sqrt(msa_data['part_var']) / np.sqrt(gage_rr_var)))
+    
     col1, col2 = st.columns(2)
     with col1:
-        # This line will now work correctly because `pd` is defined
-        msa_plot_df = pd.DataFrame(dict(ids=['Total', 'Part', 'Gage R&R', 'Repeatability', 'Reproducibility'], labels=['Total Var', 'Part-to-Part', 'Gage R&R', 'Repeatability', 'Reproducibility'], parents=['', 'Total', 'Total', 'Gage R&R', 'Gage R&R'], values=[total_var, msa_data['part_var'], gage_rr_var, msa_data['repeatability_var'], msa_data['reproducibility_var']]))
-        fig = px.sunburst(msa_plot_df, ids='ids', labels='labels', parents='parents', values='values', title="Hierarchical Sources of Variation", branchvalues='total')
+        # --- THIS IS THE CORRECTED SECTION ---
+        # We restructure the data to use the more robust 'path' argument for the sunburst chart.
+        # Each row represents a leaf node, and columns define the hierarchy.
+        data_for_sunburst = {
+            'level_1': ['Total Variation', 'Total Variation'],
+            'level_2': ['Part-to-Part', 'Gage R&R'],
+            'level_3': [None, 'Repeatability'],
+            'level_4': [None, 'Reproducibility'],
+            'values': [msa_data['part_var'], msa_data['repeatability_var']] # Add a placeholder for reproducibility
+        }
+        
+        # A small hack is needed to show both repeatability and reproducibility under Gage R&R
+        # We create a dataframe with two rows for the Gage R&R path.
+        df_sunburst = pd.DataFrame({
+            'Path': [
+                ['Total Variation', 'Part-to-Part'],
+                ['Total Variation', 'Gage R&R', 'Repeatability'],
+                ['Total Variation', 'Gage R&R', 'Reproducibility']
+            ],
+            'Values': [
+                msa_data['part_var'],
+                msa_data['repeatability_var'],
+                msa_data['reproducibility_var']
+            ]
+        })
+
+        fig = px.sunburst(
+            df_sunburst,
+            path='Path',
+            values='Values',
+            title="Hierarchical Sources of Variation"
+        )
+        fig.update_layout(margin=dict(t=40, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
+
     with col2:
         st.subheader("Key MSA Metrics")
         st.metric("Gage R&R (% Study Var)", f"{pct_gage_rr:.2f}%")
