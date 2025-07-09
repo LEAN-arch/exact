@@ -78,10 +78,15 @@ st.divider()
 with st.expander("🌐 Regulatory Context & Legend"):
     st.markdown("""
     This dashboard provides oversight required by quality management systems to ensure projects are controlled, risks are managed, and progress is visible to leadership. This directly supports several key regulatory requirements:
-
+    - **Project & Risk Management**: The `Master Dashboard` and `Project Transfer Hub` support **Design Controls** (**21 CFR 820.30**) and **Risk Management** (**ISO 14971**).
+    - **Software Validation**: The `Software V&V Dashboard` provides tools to manage the **SDLC** for medical device software, a key part of **21 CFR 820.70(i)**.
+    - **Test Method & Process Validation**: The `Assay Validation` and `Process Optimization` pages provide evidence for **TMV** (**21 CFR 820.72**) and support **Process Validation** and **QbD** principles (**ICH Q8**).
+    - **Ongoing Process Control**: The `QC Performance Analytics` and `QC Operations Hub` support ongoing monitoring as required by **21 CFR 820.250** (Statistical Techniques) and **21 CFR 820.72** (Control of Test Equipment).
+    - **Quality System Management**: The `QMS & CAPA Tracker` provides direct support for managing **Corrective and Preventive Actions** (**21 CFR 820.100**) and controlled documents.
+    - **Continual Improvement**: The `ML-Driven Analytics` page provides advanced investigational tools aligning with **ICH Q10** principles.
     - **Project & Timeline Management**: Supports the overall management of **Design Controls** as required by:
-        - **21 CFR 820.30(b)**: *Design and Development Planning* - Establishes a framework for plans that identify, describe, and assign activities.
-        - **ISO 13485:2016, Section 7.3.2**: *Design and Development Planning* - The organization shall plan and control the design and development of product.
+    - **21 CFR 820.30(b)**: *Design and Development Planning* - Establishes a framework for plans that identify, describe, and assign activities.
+    - **ISO 13485:2016, Section 7.3.2**: *Design and Development Planning* - The organization shall plan and control the design and development of product.
 
     - **Risk Matrix**: Directly supports the implementation of a **Risk Management** process throughout the product lifecycle as mandated by:
         - **ISO 14971:2019**: *Medical devices — Application of risk management*. The visualization helps in identifying and prioritizing risks for control measures.
