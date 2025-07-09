@@ -79,7 +79,14 @@ with col1:
         fig_gantt.update_traces(
             hovertemplate="<b>CAPA ID</b>: %{y}<br><b>Phase</b>: %{color}<br><b>Opened</b>: %{base|%Y-%m-%d}<br><b>Due</b>: %{x|%Y-%m-%d}<br><b>Status</b>: %{customdata[0]}<extra></extra>"
         )
-        fig_gantt.add_vline(x=pd.Timestamp.now(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+
+        # --- DEFINITIVE FIX for TypeError ---
+        # Manually add the vertical line using add_shape and add_annotation
+        today = pd.Timestamp.now()
+        fig_gantt.add_shape(type="line", x0=today, y0=0, x1=today, y1=1, yref='paper', line=dict(color="Red", width=2, dash="dash"))
+        fig_gantt.add_annotation(x=today, y=1.05, yref='paper', text="Today", showarrow=False, font=dict(color="red"))
+        # --- END OF FIX ---
+        
         st.plotly_chart(fig_gantt, use_container_width=True)
     except Exception as e:
         st.error(f"Error rendering CAPA Gantt chart: {e}")
@@ -143,7 +150,14 @@ try:
         doc_df, x_start="Last Review", x_end="Next Review Due", y="Document ID", color="Title",
         title="Document Periodic Review Timeline"
     )
-    fig_docs.add_vline(x=pd.Timestamp.now(), line_width=2, line_dash="dash", line_color="red", annotation_text="Today")
+    
+    # --- DEFINITIVE FIX for TypeError ---
+    # Apply the same manual shape and annotation fix to this chart as well
+    today = pd.Timestamp.now()
+    fig_docs.add_shape(type="line", x0=today, y0=0, x1=today, y1=1, yref='paper', line=dict(color="Red", width=2, dash="dash"))
+    fig_docs.add_annotation(x=today, y=1.05, yref='paper', text="Today", showarrow=False, font=dict(color="red"))
+    # --- END OF FIX ---
+    
     st.plotly_chart(fig_docs, use_container_width=True)
 except Exception as e:
     st.error(f"Error rendering document timeline: {e}")
