@@ -54,11 +54,9 @@ with col1:
     }
     capa_df = pd.DataFrame(capa_data)
     
-    # --- THIS IS THE FIX ---
     # Explicitly convert date columns to pandas datetime64 dtype before plotting
     capa_df['Opened Date'] = pd.to_datetime(capa_df['Opened Date'])
     capa_df['Due Date'] = pd.to_datetime(capa_df['Due Date'])
-    # --- END OF FIX ---
     
     capa_df['Status'] = capa_df['Due Date'].apply(lambda x: 'Overdue' if x < pd.Timestamp.now() else 'On Time')
     
@@ -116,7 +114,7 @@ doc_data = {
 }
 doc_df = pd.DataFrame(doc_data)
 
-# --- THIS IS THE FIX ---
+# --- THIS IS THE SECOND FIX ---
 # Explicitly convert date columns to pandas datetime64 dtype before plotting
 doc_df['Last Review'] = pd.to_datetime(doc_df['Last Review'])
 doc_df['Next Review Due'] = pd.to_datetime(doc_df['Next Review Due'])
