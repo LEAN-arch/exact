@@ -28,8 +28,7 @@ col1.metric("Active Projects", f"{total_projects - complete_projects}")
 col2.metric("High-Score Risks (>6)", f"{high_risk_score_items}", delta=high_risk_score_items, delta_color="inverse")
 col3.metric("On-Time Completion %", f"{on_time_completion_rate:.1f}%", "Target: >90%")
 
-# --- THIS IS THE CORRECTED LINE ---
-# We first convert the Timedelta series to numeric days using .dt.days, then calculate the mean.
+# This line now works because generate_project_data() provides datetime64 columns
 avg_duration = (projects_df['Due Date'] - projects_df['Start Date']).dt.days.mean()
 col4.metric("Avg. Project Duration", f"{avg_duration:.1f} days")
 
