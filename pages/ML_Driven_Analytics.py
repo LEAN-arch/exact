@@ -44,26 +44,32 @@ with tab1:
     st.subheader("Actionable Insight: Why is the latest run's score what it is?")
     st.markdown("This **SHAP Force Plot** provides an intuitive explanation for the most recent prediction. Features in red push the prediction towards failure, while features in blue push it towards health.")
     
-    # SHAP Force Plot for the latest instance
+    # --- THIS IS THE DEFINITIVE FIX FOR THE IndexError ---
     with st.spinner("Generating SHAP Force Plot..."):
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
         last_instance_idx = X.shape[0] - 1
-        
-        # This function needs to be defined to be used with st.pyplot
-        def plot_shap_force():
-            shap.force_plot(
-                explainer.expected_value[1], 
-                shap_values[1][last_instance_idx,:],
-                X.iloc[last_instance_idx,:],
-                matplotlib=True,
-                show=False,
-                text_rotation=10
-            )
-        
-        fig = plt.figure()
-        plot_shap_force()
-        st.pyplot(fig, bbox_inches='tight', clear_figure=True)
+
+        # Handle the explainer.expected_value being a scalar or a list
+        # For class 1 (Failure), the base value is the second element if it's a list,
+        # or the single scalar value itself.
+        if isinstance(explainer.expected_value, list):
+            base_value = explainer.expected_value[1]
+        else:
+            base_value = explainer.expected_value
+
+        # Use the most robust plotting pattern
+        shap.force_plot(
+            base_value,
+            shap_values[1][last_instance_idx,:],
+            X.iloc[last_instance_idx,:],
+            matplotlib=True,
+            show=False,
+            text_rotation=10
+        )
+        st.pyplot(plt.gcf(), bbox_inches='tight')
+        plt.clf() # Clear the figure to prevent state leakage
+    # --- END OF FIX ---
 
 
 with tab2:
