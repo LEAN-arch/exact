@@ -1,4 +1,4 @@
-
+```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -184,7 +184,7 @@ with tab3:
             exp = st.slider("Operator Experience (yr)", 1, 5, 2)
             input_data = pd.DataFrame([[age, reagent, exp]], columns=X.columns)
             prediction = model.predict(input_data)
-            st.error(f"**Predicted Root Cause:** {prediction[0]}")
+            st.write(f"**Predicted Root Cause:** {prediction[0]}")
     except Exception as e:
         st.error(f"Error in root cause analysis: {e}")
         logger.error(f"Root cause analysis error: {e}")
