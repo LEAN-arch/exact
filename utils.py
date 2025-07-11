@@ -15,8 +15,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, PolynomialFeatures, StandardScaler
 from sklearn.linear_model import LinearRegression
-import tensorflow as tf
-from tensorflow.keras import layers
+# --- FIX: Removed unused TensorFlow imports that were causing a fatal error ---
+# import tensorflow as tf
+# from tensorflow.keras import layers
+# --- END OF FIX ---
 
 # --- Custom Plotly Template for Exact Sciences ---
 exact_sciences_template = {
@@ -35,7 +37,7 @@ pio.templates["exact_sciences"] = exact_sciences_template
 pio.templates.default = "exact_sciences"
 
 # === CORE DATA GENERATION (Adapted for Exact Sciences) ===
-
+# ... (All functions from generate_project_data to train_rca_model remain unchanged) ...
 def generate_project_data():
     """Generates project data specific to Exact Sciences' product pipeline and transfer activities."""
     data = {
@@ -90,8 +92,6 @@ def generate_risk_data():
     df['Risk_Score'] = df['Impact_Score'] * df['Prob_Score']
     return df.sort_values(by='Risk_Score', ascending=False)
 
-# === ASSAY VALIDATION DATA (Adapted for Exact Sciences) ===
-
 def generate_linearity_data():
     """Generates linearity data for a quantitative RT-PCR assay (e.g., Oncotype DX® target gene)."""
     expected_log = np.array([2, 3, 4, 5, 6, 7])
@@ -123,8 +123,6 @@ def generate_specificity_data():
     data.extend([{'Sample Type': 'Interferent (Bilirubin)', 'Signal (% Meth)': v} for v in np.random.uniform(0.2, 0.7, 10)])
     data.extend([{'Sample Type': 'Control + Interferents', 'Signal (% Meth)': v} for v in np.random.normal(88, 3, 10)])
     return pd.DataFrame(data)
-
-# === QC PERFORMANCE DATA (Adapted for Exact Sciences) ===
 
 def generate_spc_data():
     """Generates Levey-Jennings data (Ct values) for an Oncotype DX® positive control."""
@@ -174,8 +172,6 @@ def calculate_cpk(data_series, usl, lsl):
     cpl = (mean - lsl) / (3 * std_dev)
     return min(cpu, cpl)
 
-# === DOE DATA (Adapted for Exact Sciences) ===
-
 def generate_doe_data():
     """Generates DOE data for an RT-PCR annealing step optimization."""
     np.random.seed(42)
@@ -200,8 +196,6 @@ def fit_rsm_model_and_optimize(df):
     bounds = [(X.iloc[:,0].min(), X.iloc[:,0].max()), (X.iloc[:,1].min(), X.iloc[:,1].max())]
     result = minimize(neg_response, initial_guess, method='L-BFGS-B', bounds=bounds)
     return model, poly, result.x, -result.fun
-
-# === ML ANALYTICS DATA (Adapted for Exact Sciences) ===
 
 def generate_instrument_health_data():
     """Generates health data for an NGS Sequencer (e.g., NovaSeq)."""
@@ -248,7 +242,11 @@ def train_rca_model(df):
     model.fit(X, y)
     return model, X, y
 
-# === SOFTWARE V&V and OPS DATA (Adapted for Exact Sciences) ===
+# --- FIX: Removed unused TensorFlow-dependent functions ---
+# def generate_golden_batch_data(): ...
+# def generate_live_qc_data(): ...
+# def train_autoencoder_model(): ...
+# --- END OF FIX ---
 
 def generate_traceability_data():
     """Generates traceability data for an Oncotype DX® QC software validation."""
@@ -309,7 +307,6 @@ def generate_reagent_lot_status_data():
         'Notes': ['Nominal performance.', 'Monitor closely, nearing re-order point.', 'Awaiting OOS investigation results.', 'DO NOT USE - Failed incoming QC.', 'Remove from inventory.']
     }
     return pd.DataFrame(data)
-
 
 def generate_v_model_data():
     """Returns coordinates and labels for drawing a V-Model diagram."""
