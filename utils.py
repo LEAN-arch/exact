@@ -19,7 +19,6 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 # --- Custom Plotly Template for Exact Sciences ---
-# A professional, clean template for all visualizations
 exact_sciences_template = {
     "layout": {
         "font": {"family": "Helvetica, Arial, sans-serif", "size": 12, "color": "#333333"},
@@ -86,7 +85,7 @@ def generate_risk_data():
     df = pd.DataFrame(data)
     impact_map = {'Negligible': 1, 'Minor': 2, 'Moderate': 3, 'Serious': 4, 'Critical': 5}
     prob_map = {'Very Low': 1, 'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5}
-    df['Impact_Score'] = df['Impact'].map(impact_map).fillna(df['Impact'].map({'High': 4})) # Handle mixed terms
+    df['Impact_Score'] = df['Impact'].map(impact_map).fillna(df['Impact'].map({'High': 4}))
     df['Prob_Score'] = df['Probability'].map(prob_map).fillna(df['Probability'].map({'Medium': 3, 'High': 4}))
     df['Risk_Score'] = df['Impact_Score'] * df['Prob_Score']
     return df.sort_values(by='Risk_Score', ascending=False)
@@ -95,38 +94,33 @@ def generate_risk_data():
 
 def generate_linearity_data():
     """Generates linearity data for a quantitative RT-PCR assay (e.g., Oncotype DX® target gene)."""
-    expected_log = np.array([2, 3, 4, 5, 6, 7]) # Log10 copies/reaction
-    # Simulate PCR plateau effect for non-linearity
+    expected_log = np.array([2, 3, 4, 5, 6, 7])
     ct_values = 38 - 3.3 * (expected_log - (expected_log**2 / 20))
-    # Add random noise
     observed_ct = ct_values + np.random.normal(0, 0.15, expected_log.shape)
     return pd.DataFrame({'Log10 Target Concentration': expected_log, 'Observed Ct Value': observed_ct})
 
 def generate_precision_data():
     """Generates precision data (Ct values) for an Oncotype DX® QC sample."""
     days = ['Day 1', 'Day 2', 'Day 3']; operators = ['Op 1', 'Op 2']; data = []
-    # Simulate a small operator bias and increased variability on one day
     for day in days:
         for op in operators:
-            mean_ct = 24.6 if op == 'Op 1' else 24.75 # Small systematic bias
-            stdev_ct = 0.25 if day == 'Day 3' else 0.15 # Higher noise on Day 3
+            mean_ct = 24.6 if op == 'Op 1' else 24.75
+            stdev_ct = 0.25 if day == 'Day 3' else 0.15
             values = np.random.normal(loc=mean_ct, scale=stdev_ct, size=5)
             for val in values: data.append({'Day': day, 'Operator': op, 'Ct Value': val})
     return pd.DataFrame(data)
 
 def generate_msa_data():
     """Generates MSA data for a Cologuard® methylation assay signal."""
-    return {'part_var': 85.0, 'repeatability_var': 5.0, 'reproducibility_var': 10.0} # Higher reproducibility issue
+    return {'part_var': 85.0, 'repeatability_var': 5.0, 'reproducibility_var': 10.0}
 
 def generate_specificity_data():
     """Generates specificity data for a Cologuard® methylation marker, testing for interference."""
     np.random.seed(33); data = []
-    # Signal is % Methylation
     data.extend([{'Sample Type': 'NTC (No Template Control)', 'Signal (% Meth)': v} for v in np.random.uniform(0.1, 0.5, 10)])
     data.extend([{'Sample Type': 'Methylated Control', 'Signal (% Meth)': v} for v in np.random.normal(95, 2, 10)])
     data.extend([{'Sample Type': 'Interferent (Hemoglobin)', 'Signal (% Meth)': v} for v in np.random.uniform(0.2, 0.8, 10)])
     data.extend([{'Sample Type': 'Interferent (Bilirubin)', 'Signal (% Meth)': v} for v in np.random.uniform(0.2, 0.7, 10)])
-    # Simulate PCR inhibition from hemoglobin
     data.extend([{'Sample Type': 'Control + Interferents', 'Signal (% Meth)': v} for v in np.random.normal(88, 3, 10)])
     return pd.DataFrame(data)
 
@@ -137,9 +131,7 @@ def generate_spc_data():
     np.random.seed(42);
     mean_ct = 25.0; std_ct = 0.2
     data = np.random.normal(loc=mean_ct, scale=std_ct, size=30)
-    # Simulate a downward shift (more efficient PCR)
     data[15:20] = data[15:20] - 0.3
-    # Simulate a single upward flyer (less efficient)
     data[25] = mean_ct + 3.5 * std_ct
     return pd.DataFrame({'Ct Value': data, 'Run': range(1, 31)})
 
@@ -148,31 +140,26 @@ def detect_westgard_rules(df, value_col='Ct Value'):
     mean = df[value_col].mean(); std = df[value_col].std(); violations = []
     for i in range(len(df)):
         val = df.loc[i, value_col]
-        # 1_3s rule
         if val > mean + 3 * std or val < mean - 3 * std: violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '1_3s'})
-        # 2_2s rule
         if i >= 1:
             last_2 = df.loc[i-1:i, value_col]
             if all(last_2 > mean + 2 * std) or all(last_2 < mean - 2 * std):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '2_2s'})
-        # 4_1s rule
         if i >= 3:
             last_4 = df.loc[i-3:i, value_col]
             if all(last_4 > mean + std) or all(last_4 < mean - std):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '4_1s'})
-        # 10_x rule (trend)
         if i >= 9:
             last_10 = df.loc[i-9:i, value_col]
             if all(last_10 > mean) or all(last_10 < mean):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '10_x'})
-    # Return unique violations by run and rule type
     return pd.DataFrame(violations).drop_duplicates(subset=['Run', 'Rule'])
 
 def generate_lot_data():
     """Generates lot-to-lot data for an OncoExTra® library prep kit (yield in ng)."""
     np.random.seed(0); lots = ['Lot A (Ref)', 'Lot B', 'Lot C', 'Lot D (New)']; data = []
     for lot in lots:
-        mean_yield = 75 if lot == 'Lot D (New)' else 90 # New lot has lower yield
+        mean_yield = 75 if lot == 'Lot D (New)' else 90
         stdev = 8 if lot == 'Lot D (New)' else 5
         values = np.random.normal(loc=mean_yield, scale=stdev, size=20)
         for val in values: data.append({'Lot ID': lot, 'Library Yield (ng)': val})
@@ -194,11 +181,8 @@ def generate_doe_data():
     np.random.seed(42)
     temp_levels = np.array([-1.414, -1, 1, -1, 1, 0, 0, 0, 0, -1.414, 1.414])
     primer_levels = np.array([0, -1, -1, 1, 1, -1.414, 1.414, 0, 0, 0, 0])
-    
-    temp_real = temp_levels * 2 + 60  # e.g., 58-62 °C range
-    primer_real = primer_levels * 50 + 200 # e.g., 150-250 nM range
-
-    # Simulate ideal efficiency at a specific point, with interaction
+    temp_real = temp_levels * 2 + 60
+    primer_real = primer_levels * 50 + 200
     true_efficiency = 95 - (2*temp_levels**2) - (3*primer_levels**2) + (1.5*temp_levels*primer_levels)
     measured_efficiency = true_efficiency + np.random.normal(0, 0.8, len(temp_real))
     return pd.DataFrame({'Annealing Temp (°C)': temp_real, 'Primer Conc. (nM)': primer_real, 'PCR Efficiency (%)': measured_efficiency})
@@ -222,16 +206,11 @@ def fit_rsm_model_and_optimize(df):
 def generate_instrument_health_data():
     """Generates health data for an NGS Sequencer (e.g., NovaSeq)."""
     np.random.seed(101); runs = 100
-    # Simulate laser power degradation and flow cell temperature instability
     laser_power_A = 85 - np.linspace(0, 5, runs) + np.random.normal(0, 0.2, runs)
     flow_cell_temp_C = 50 + np.random.normal(0, 0.1, runs)
-    # Simulate a pump issue causing pressure fluctuations
     pump_pressure_psi = 10 + np.sin(np.linspace(0, 10 * np.pi, runs)) * 0.5 + np.random.normal(0, 0.1, runs)
-    
-    # Introduce a failure event
     laser_power_A[85:] -= np.logspace(0, 1, 15)
     flow_cell_temp_C[90:] += np.random.normal(0.5, 0.2, 10)
-
     df = pd.DataFrame({
         'Run_ID': range(runs), 'Laser_A_Power': laser_power_A,
         'Flow_Cell_Temp_C': flow_cell_temp_C, 'Pump_Pressure_psi': pump_pressure_psi
@@ -248,7 +227,7 @@ def train_instrument_model(df):
     return model, X
 
 def generate_rca_data():
-    """Generates Root Cause Analysis data for Cologuard® assay failures."""
+    """Generates RAW Root Cause Analysis data for Cologuard® assay failures."""
     np.random.seed(0); n_samples = 200
     reagent_lot_age = np.random.randint(1, 120, n_samples)
     operator_id = np.random.choice([101, 102, 103, 104], n_samples, p=[0.4, 0.3, 0.2, 0.1])
@@ -260,9 +239,8 @@ def generate_rca_data():
         elif 104 == operator_id[i] and np.random.rand() > 0.6: causes.append('Operator/Sample Handling')
         else: causes.append('No Fault Found')
     df = pd.DataFrame({'Reagent Lot Age (days)': reagent_lot_age, 'Operator ID': operator_id, 'Instrument ID': instrument_id, 'Root Cause': causes})
-    # One-hot encode categorical features for modeling
-    return pd.get_dummies(df, columns=['Instrument ID', 'Operator ID'], drop_first=True)
-
+    # --- FIX: The one-hot encoding line is now permanently removed from this utility function ---
+    return df
 
 def train_rca_model(df):
     """Trains a RandomForest model for Cologuard® Root Cause Analysis."""
@@ -334,7 +312,6 @@ def generate_reagent_lot_status_data():
     return pd.DataFrame(data)
 
 
-# --- Keep other functions from previous version if they don't need adaptation ---
 def generate_v_model_data():
     """Returns coordinates and labels for drawing a V-Model diagram."""
     data = {
@@ -353,7 +330,7 @@ def generate_defect_trend_data():
     dates = pd.to_datetime(pd.date_range(start="2024-06-01", periods=30, freq='D'))
     opened = np.random.randint(0, 4, size=30).cumsum() + 5
     closed = (opened * np.random.uniform(0.5, 0.9, size=30)).astype(int)
-    closed[20:] = np.clip(closed[20:] + 5, 0, opened[20:]) # Simulate a push to close bugs
+    closed[20:] = np.clip(closed[20:] + 5, 0, opened[20:])
     return pd.DataFrame({'Date': dates, 'Opened': opened, 'Closed': closed})
 
 def generate_capa_source_data():
