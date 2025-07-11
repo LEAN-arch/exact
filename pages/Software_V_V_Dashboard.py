@@ -77,7 +77,8 @@ with col2:
         if val == 'Fail': return 'background-color: #dc3545; color: white;'
         if val == 'In Progress': return 'background-color: #ffc107; color: black;'
         return ''
-    st.dataframe(req_df.style.applymap(style_status, subset=['Test Status']), use_container_width=True, height=550, hide_index=True)
+    # Updated from .applymap to .map to resolve deprecation warning
+    st.dataframe(req_df.style.map(style_status, subset=['Test Status']), use_container_width=True, height=550, hide_index=True)
 
 st.divider()
 
