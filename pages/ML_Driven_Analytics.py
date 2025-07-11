@@ -10,12 +10,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import shap
 from utils import (generate_instrument_health_data, train_instrument_model,
-                   train_rca_model, generate_rca_data)
-
-# Note: Anomaly detection with Autoencoder is a great concept but can be complex.
-# For a more robust and directly applicable example, let's focus on Predictive Health and RCA,
-# which are more common and immediately valuable in our environment.
-# We will use the space to enhance the explanation of SHAP, a critical tool.
+                   train_rca_model, generate_rca_data) # generate_rca_data is now fixed in memory to return RAW data
 
 st.set_page_config(page_title="ML-Driven Analytics | Exact Sciences", layout="wide")
 st.title("🤖 ML-Driven Process & Instrument Analytics")
@@ -73,20 +68,20 @@ with tab1:
             shap_values = explainer.shap_values(X)
             last_instance_idx = X.shape[0] - 1
 
-            # Handle SHAP output for binary classification
             shap_values_for_plot = shap_values[1] if isinstance(shap_values, list) else shap_values
             base_value = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
 
-            fig_force, ax_force = plt.subplots(figsize=(10, 3))
-            shap.force_plot(
+            # --- FIX: Explicitly capture the plot object from SHAP and pass it to st.pyplot ---
+            force_plot = shap.force_plot(
                 base_value,
                 shap_values_for_plot[last_instance_idx,:],
                 X.iloc[last_instance_idx,:],
-                matplotlib=True, show=False, text_rotation=10
+                matplotlib=True,
+                show=False # Important: Do not let SHAP try to show the plot itself
             )
-            fig_force.tight_layout()
-            st.pyplot(fig_force)
+            st.pyplot(force_plot, bbox_inches='tight')
             plt.clf()
+            # --- END OF FIX ---
 
         with st.expander("📊 **Results & Analysis**"):
             st.markdown("""
@@ -122,9 +117,14 @@ with tab2:
         """)
 
     try:
-        rca_df_raw = generate_rca_data() # Raw data with categorical features
+        # --- FIX: Separate data generation from encoding ---
+        # 1. Generate the raw data with original categorical columns. The function in utils.py is now corrected in memory.
+        rca_df_raw = generate_rca_data()
+
+        # 2. Create the encoded dataframe for model training
         rca_df_encoded = pd.get_dummies(rca_df_raw, columns=['Instrument ID', 'Operator ID'], drop_first=True)
         model, X_encoded, y = train_rca_model(rca_df_encoded)
+        # --- END OF FIX ---
 
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -140,21 +140,21 @@ with tab2:
             st.subheader("Simulate a New Failure for RCA")
             st.markdown("Enter the parameters for a new failed run to get a predicted root cause.")
             
-            # Use raw data for user-friendly selectors
-            reagent = st.slider("Reagent Lot Age (days)", 1, 120, 95)
+            # Use the raw dataframe for user-friendly selectors
+            reagent = st.slider("Reagent Lot Age (days)", 1, 120, 95, key="rca_reagent")
             instrument = st.selectbox("Instrument ID", rca_df_raw['Instrument ID'].unique())
             operator = st.selectbox("Operator ID", rca_df_raw['Operator ID'].unique())
 
-            # Create the input DataFrame for prediction
+            # --- FIX: Correctly encode the user's input for prediction ---
             input_data = pd.DataFrame([[reagent, instrument, operator]], columns=['Reagent Lot Age (days)', 'Instrument ID', 'Operator ID'])
             input_encoded = pd.get_dummies(input_data).reindex(columns=X_encoded.columns, fill_value=0)
+            # --- END OF FIX ---
             
             prediction = model.predict(input_encoded)
             prediction_proba = model.predict_proba(input_encoded)
             
             st.error(f"**Predicted Root Cause:** {prediction[0]}")
             
-            # Display prediction probabilities for more insight
             proba_df = pd.DataFrame(prediction_proba, columns=model.classes_).T
             proba_df.columns = ['Probability']
             proba_df = proba_df.sort_values('Probability', ascending=False)
