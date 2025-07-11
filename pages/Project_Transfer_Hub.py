@@ -22,7 +22,6 @@ with st.expander("🌐 Regulatory Context: Design Transfer & The DHF"):
     """)
 
 # --- Data Generation ---
-# Using more realistic, product-specific data
 tasks = {
     'Design': [
         ('OncoExTra® Lib Prep Automation', 'Finalize User Requirements', 'S. Scientist', 'Due: in 10 days'),
@@ -153,14 +152,14 @@ signoff_data = {
 }
 signoff_df = pd.DataFrame(signoff_data)
 
-# Apply styling for visual clarity
 def style_signoff(val):
-    if '✔️' in val:
+    if '✔️' in str(val):
         return 'color: green; font-weight: bold;'
-    elif 'Review' in val:
+    elif 'Review' in str(val):
         return 'color: orange;'
-    elif 'Pending' in val:
+    elif 'Pending' in str(val):
         return 'color: red;'
     return ''
 
-st.dataframe(signoff_df.style.applymap(style_signoff), use_container_width=True)
+# Updated from .applymap to .map to resolve deprecation warning
+st.dataframe(signoff_df.style.map(style_signoff), use_container_width=True)
