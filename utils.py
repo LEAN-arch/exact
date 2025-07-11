@@ -239,7 +239,6 @@ def generate_rca_data():
         elif 104 == operator_id[i] and np.random.rand() > 0.6: causes.append('Operator/Sample Handling')
         else: causes.append('No Fault Found')
     df = pd.DataFrame({'Reagent Lot Age (days)': reagent_lot_age, 'Operator ID': operator_id, 'Instrument ID': instrument_id, 'Root Cause': causes})
-    # --- FIX: The one-hot encoding line is now permanently removed from this utility function ---
     return df
 
 def train_rca_model(df):
