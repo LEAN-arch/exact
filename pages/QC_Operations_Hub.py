@@ -4,41 +4,43 @@ import pandas as pd
 from datetime import date, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
-from utils import generate_instrument_schedule_data, generate_training_data_for_heatmap
+from utils import generate_instrument_schedule_data, generate_training_data_for_heatmap, generate_reagent_lot_status_data
 
-st.set_page_config(page_title="QC Operations Hub", layout="wide")
-st.title("🔧 QC Operations Hub")
-st.markdown("### Managing the operational readiness of equipment and personnel.")
+st.set_page_config(
+    page_title="QC Operations Hub | Exact Sciences",
+    layout="wide"
+)
 
-with st.expander("🌐 Regulatory Context & Legend"):
+st.title("🔧 QC Operations & Readiness Hub")
+st.markdown("### Managing the operational readiness of equipment, personnel, and critical reagents.")
+
+with st.expander("🌐 Regulatory Context: Ensuring a State of Control"):
     st.markdown("""
-    This dashboard directly supports the operational management requirements of a regulated laboratory.
-    - **Control of Test Equipment (21 CFR 820.72)**: The instrument schedule provides objective evidence of maintenance (PM), calibration status, and suitability for use (availability vs. OOS).
-    - **Personnel & Training (21 CFR 820.25)**: The training competency heatmap and readiness charts demonstrate that personnel have the necessary training and skills to perform their assigned responsibilities correctly.
+    This dashboard provides objective evidence that the QC laboratory is maintained in a state of control, which is a foundational requirement of our Quality System.
+
+    - **Control of Test Equipment (21 CFR 820.72)**: The instrument schedule provides a real-time log of maintenance (PM), calibration status, and suitability for use (availability vs. OOS), demonstrating that our equipment is fit for its intended purpose.
+    - **Personnel & Training (21 CFR 820.25)**: The training competency heatmap and readiness charts provide documented evidence that personnel have the necessary education, background, training, and experience to correctly perform their assigned responsibilities.
+    - **Device Acceptance / Incoming QC (21 CFR 820.80)**: The reagent lot management table is a critical tool for tracking the status and acceptance of incoming materials and reagents that are used in production.
+    - **CLIA §493.1200 - Condition: Laboratory Director Responsibilities**: While a broader regulation, this dashboard provides the tools a Lab Director or their designee (such as a Staff Scientist) needs to ensure the lab has the resources, qualified personnel, and equipment to provide quality testing services.
     """)
 
 # --- 1. KPIs ---
-st.header("1. Operational KPIs")
-col1, col2, col3 = st.columns(3)
-col1.metric("Overall Instrument Uptime", "92%", help="Percentage of scheduled time that instruments are available for use (not OOS or in unscheduled maintenance).")
-col2.metric("Overdue PM/Calibrations", "1", delta="1", delta_color="inverse", help="Number of instruments currently overdue for scheduled preventative maintenance or calibration.")
-col3.metric("Critical Assay Readiness", "75%", help="Lowest readiness percentage across all critical assays, based on certified personnel.")
+st.header("1. Operational Readiness KPIs")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Overall Instrument Uptime", "91%", help="Percentage of scheduled time that critical instruments are available for use.")
+col2.metric("Overdue PM/Calibrations", "1", delta="1", delta_color="inverse", help="Count of instruments currently overdue for scheduled maintenance.")
+col3.metric("Critical Reagent Lots (<30% remaining)", "2", help="Number of in-use critical lots with low inventory.")
+col4.metric("NGS Assay Readiness", "50%", help="Lowest readiness percentage across all critical assays, based on certified personnel.")
 
 st.divider()
 
 # --- 2. Instrument & Equipment Management ---
 st.header("2. Instrument & Equipment Management")
+st.caption("Real-time status of critical high-complexity instruments like NGS sequencers, liquid handlers, and PCR machines.")
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("Instrument Schedule Timeline")
-    with st.expander("🔬 **Plot Purpose & Analysis**"):
-        st.markdown("""
-        #### Purpose
-        This Gantt chart provides a dynamic, forward-looking view of instrument utilization. It replaces a static list with an interactive schedule, allowing for efficient resource planning and identification of potential bottlenecks.
-        #### Analysis
-        The timeline clearly shows that **PCR-01** is currently blocked for overdue preventative maintenance, and **PCR-02** is non-operational (OOS). This indicates an immediate risk to any PCR-based workflow. Conversely, HPLC-02 is available today but scheduled for use tomorrow, allowing for proactive planning of other experiments.
-        """)
+    st.subheader("Weekly Instrument Schedule & Status")
     schedule_df = generate_instrument_schedule_data()
     fig_schedule = px.timeline(
         schedule_df,
@@ -46,75 +48,98 @@ with col1:
         title="Weekly Instrument Schedule & Status",
         hover_name="Details",
         color_discrete_map={
-            'In Use': 'royalblue',
-            'Scheduled': 'lightgrey',
-            'PM Due': 'orange',
-            'Out of Spec': 'red'
+            'In Use': '#1f77b4',
+            'Scheduled': '#aec7e8',
+            'Available': '#2ca02c',
+            'PM Due': '#ff7f0e',
+            'Out of Spec': '#d62728'
         }
     )
 
-    # --- DEFINITIVE FIX for TypeError ---
-    # Manually add the vertical line using add_shape and add_annotation
     today = pd.Timestamp.now()
-    fig_schedule.add_shape(type="line", x0=today, y0=0, x1=today, y1=1, yref='paper', line=dict(color="Green", width=2, dash="dash"))
-    fig_schedule.add_annotation(x=today, y=1.05, yref='paper', text="Now", showarrow=False, font=dict(color="green"))
-    # --- END OF FIX ---
-    
+    fig_schedule.add_shape(type="line", x0=today, y0=-0.5, x1=today, y1=len(schedule_df['Instrument'].unique()) - 0.5, line=dict(color="Red", width=2, dash="dash"))
+    fig_schedule.add_annotation(x=today, y=1.05, yref='paper', text="Now", showarrow=False, font=dict(color="red", size=14))
+    fig_schedule.update_yaxes(categoryorder="array", categoryarray=schedule_df['Instrument'].unique()[::-1]) # Keep order stable
     st.plotly_chart(fig_schedule, use_container_width=True)
 
 with col2:
-    st.subheader("Equipment Action Items")
-    with st.expander("🔬 **Table Purpose**"):
-        st.markdown("""
-        This table is filtered to show only those instruments that require immediate attention, creating a clear, prioritized worklist for the lab manager or responsible scientist.
-        """)
+    st.subheader("Equipment Action Board")
+    st.info("Filtered list of instruments requiring immediate attention.")
     action_items_df = schedule_df[schedule_df['Status'].isin(['PM Due', 'Out of Spec'])]
     st.dataframe(action_items_df[['Instrument', 'Status', 'Details']], use_container_width=True, hide_index=True)
 
+    with st.expander("🔬 **Analysis**"):
+        st.markdown("""
+        The timeline clearly flags an immediate risk to our PCR and NGS workflows.
+        - **QuantStudio-01** is overdue for preventative maintenance, making it unavailable and jeopardizing Oncotype DX® testing capacity.
+        - **NovaSeq-02** is Out of Spec, halting all OncoExTra® sequencing on that instrument. An investigation (OOS-451) is underway.
+        This provides a clear, prioritized worklist for the lab manager and engineering team.
+        """)
+
 st.divider()
 
-# --- 3. Personnel & Training Readiness ---
-st.header("3. Personnel & Training Readiness")
+# --- NEW: Reagent Lot Management ---
+st.header("3. Reagent & Consumable Lot Management")
+st.caption("Tracking the status, expiry, and quantity of critical lots to ensure process consistency and prevent downtime.")
+reagent_df = generate_reagent_lot_status_data()
+
+def style_reagent_status(df):
+    style = pd.DataFrame('', index=df.index, columns=df.columns)
+    style.loc[df['Status'] == 'Expired', :] = 'background-color: #d62728; color: white'
+    style.loc[df['Status'] == 'On Hold', :] = 'background-color: #ff7f0e; color: white'
+    style.loc[df['Quantity Remaining (%)'] < 30, 'Quantity Remaining (%)'] = 'background-color: #ffbb78'
+    style.loc[pd.to_datetime(df['Expiry Date']) < pd.to_datetime(date.today() + timedelta(days=30)), 'Expiry Date'] = 'background-color: #ffbb78'
+    return style
+
+st.dataframe(reagent_df.style.apply(style_reagent_status, axis=None), use_container_width=True, hide_index=True)
+
+with st.expander("🔬 **Analysis & Action**"):
+    st.markdown("""
+    This table provides critical visibility into a major source of process variability and lab downtime.
+    - **Action Item 1 (Expired)**: Lot `CG-EB-2350` is expired and must be removed from inventory immediately to prevent accidental use.
+    - **Action Item 2 (On Hold)**: Lot `OEX-LPK-2406` is on hold pending an investigation. This creates a supply risk for the OncoExTra assay, as there is only one other qualified lot (`OEX-LPK-2405`). The investigation must be prioritized.
+    - **Proactive Action (Low Inventory)**: Lot `ODX-PK-2399` is below the 30% re-order threshold. A new order should be placed to ensure continuity of Oncotype DX testing.
+    """)
+
+st.divider()
+
+# --- 4. Personnel & Training Readiness ---
+st.header("4. Personnel & Training Readiness")
 col1, col2 = st.columns([1.5, 1])
 
 with col1:
-    st.subheader("Training Competency Heatmap")
-    with st.expander("🔬 **Plot Purpose & Analysis**"):
-        st.markdown("""
-        #### Purpose
-        A heatmap provides an instant visual summary of the lab's skill matrix. It is far more effective than a table of checkmarks for identifying gaps and single points of failure.
-        #### Analysis
-        The heatmap immediately reveals that **Peter Jones** is a potential risk, as he is not trained on any of the advanced assays (PCR or NGS). It also shows that **John Doe** is the only analyst currently in training for the critical NGS Lib Prep method, highlighting a potential future bottleneck if Jane Smith or Susan Chen are unavailable.
-        """)
+    st.subheader("QC Analyst Competency Matrix")
     training_df = generate_training_data_for_heatmap()
     fig_heatmap = go.Figure(data=go.Heatmap(
         z=training_df.values,
         x=training_df.columns,
         y=training_df.index,
-        colorscale=[[0, 'lightgrey'], [0.5, '#ffc107'], [1, '#28a745']], # Not Trained, In Training, Certified
+        colorscale=[[0, '#d62728'], [0.5, '#ff7f0e'], [1, '#2ca02c']],
         colorbar=dict(tickvals=[0, 1, 2], ticktext=['Not Trained', 'In Training', 'Certified'])
     ))
-    fig_heatmap.update_layout(title="Lab Analyst Competency Matrix")
+    fig_heatmap.update_layout(title="Lab Analyst Competency by Assay/System", yaxis={'categoryorder':'total descending'})
     st.plotly_chart(fig_heatmap, use_container_width=True)
 
 with col2:
-    st.subheader("Assay Readiness Level")
-    with st.expander("🔬 **Plot Purpose & Analysis**"):
-        st.markdown("""
-        #### Purpose
-        This bar chart aggregates the heatmap data into a high-level management metric. It answers the question: "For any given assay, what percentage of our team is fully certified to run it?"
-        #### Analysis
-        While readiness for HPLC and Safety is 100% of the core team, the readiness for **NGS Lib Prep** is only 50%. This is a significant risk. If the two certified analysts are unavailable, the entire NGS workflow stops. This data justifies the need for cross-training Peter Jones and completing John Doe's training as a high priority.
-        """)
+    st.subheader("Assay Team Readiness Level")
     readiness = (training_df == 2).mean() * 100
     readiness_df = readiness.reset_index()
     readiness_df.columns = ['Assay', 'Readiness Pct']
-    
+
     fig_bar = px.bar(
         readiness_df,
-        x='Assay', y='Readiness Pct', color='Assay',
-        title='Percent of Analysts Certified per Assay',
-        range_y=[0, 100]
+        x='Readiness Pct', y='Assay', orientation='h', color='Assay',
+        title='Percent of Team Certified per Assay',
+        range_x=[0, 100]
     )
-    fig_bar.add_hline(y=75, line_width=2, line_dash="dash", line_color="red", annotation_text="Readiness Target")
+    fig_bar.add_vline(x=75, line_width=2, line_dash="dash", line_color="red", annotation_text="Target")
+    fig_bar.update_layout(xaxis_title="Certification Rate (%)", yaxis_title=None)
     st.plotly_chart(fig_bar, use_container_width=True)
+
+with st.expander("🔬 **Analysis & Action**"):
+    st.markdown("""
+    This analysis identifies personnel-related risks to our testing capacity.
+    - **Single Point of Failure**: The heatmap reveals that the **Staff Scientist is the only person certified on the OncoExTra Bioinformatics software (SW-301)**. This is a critical risk and a bottleneck for data analysis. Cross-training Jane Smith must be a top priority.
+    - **NGS Bottleneck**: Only two people are certified on the complex **OncoExTra NGS Lib Prep** method. If one is unavailable, our NGS capacity is severely limited. Completing John Doe's training is crucial.
+    - **Training Plan**: This data provides the justification needed to develop a formal cross-training plan to mitigate these risks and improve overall lab flexibility and robustness.
+    """)
