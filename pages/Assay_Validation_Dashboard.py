@@ -27,7 +27,7 @@ with st.expander("🌐 Regulatory Context: The Role of TMV"):
     - **Best Practices:** The analyses follow principles from **Clinical and Laboratory Standards Institute (CLSI) Guidelines** (e.g., EP05 for Precision, EP06 for Linearity, EP17 for Limit of Blank/Detection).
     """)
 
-# --- Data Generation (Now from Exact Sciences-specific utils) ---
+# --- Data Generation ---
 linearity_df = generate_linearity_data()
 precision_df = generate_precision_data()
 msa_data = generate_msa_data()
@@ -157,24 +157,32 @@ with tab3:
     total_var = msa_data['part_var'] + msa_data['repeatability_var'] + msa_data['reproducibility_var']
     gage_rr_var = msa_data['repeatability_var'] + msa_data['reproducibility_var']
     pct_gage_rr = (gage_rr_var / total_var) * 100
-    # Formula for ndc
-    ndc = int(1.41 * (np.sqrt(msa_data['part_var']) / np.sqrt(gage_rr_var)))
+    ndc = int(1.41 * (np.sqrt(msa_data['part_var']) / np.sqrt(gage_rr_var))) if gage_rr_var > 0 else float('inf')
 
     col1, col2 = st.columns([1.5, 1])
     with col1:
-        df_sunburst = pd.DataFrame([
-            dict(id="Total Variation", parent="", value=total_var),
-            dict(id="Part-to-Part", parent="Total Variation", value=msa_data['part_var']),
-            dict(id="Gage R&R", parent="Total Variation", value=gage_rr_var),
-            dict(id="Repeatability (EV)", parent="Gage R&R", value=msa_data['repeatability_var']),
-            dict(id="Reproducibility (AV)", parent="Gage R&R", value=msa_data['reproducibility_var']),
-        ])
-        fig = px.sunburst(df_sunburst, ids='id', parents='parent', values='value',
-                          title="Hierarchical Sources of Variation (% Contribution)",
-                          color='id', color_discrete_map={
-                              '(?)':'#1A3A6D', 'Total Variation':'#1A3A6D', 'Part-to-Part':'#2ca02c',
-                              'Gage R&R':'#d62728', 'Repeatability (EV)':'#ff7f0e', 'Reproducibility (AV)':'#ffbb78'
-                          })
+        # Corrected robust data structure for the sunburst plot
+        sunburst_data = {
+            'ids': ["Total Variation", "Part-to-Part", "Gage R&R", "Repeatability (EV)", "Reproducibility (AV)"],
+            'parents': ["", "Total Variation", "Total Variation", "Gage R&R", "Gage R&R"],
+            'values': [total_var, msa_data['part_var'], gage_rr_var, msa_data['repeatability_var'], msa_data['reproducibility_var']]
+        }
+        df_sunburst = pd.DataFrame(sunburst_data)
+        
+        fig = px.sunburst(
+            df_sunburst,
+            ids='ids',
+            parents='parents',
+            values='values',
+            title="Hierarchical Sources of Variation (% Contribution)",
+            color='ids',
+            color_discrete_map={
+                '(?)':'#1A3A6D', 'Total Variation':'#1A3A6D', 'Part-to-Part':'#2ca02c',
+                'Gage R&R':'#d62728', 'Repeatability (EV)':'#ff7f0e', 'Reproducibility (AV)':'#ffbb78'
+            },
+            custom_data=[df_sunburst['values'] / total_var * 100],
+        )
+        fig.update_traces(hovertemplate='<b>%{label}</b><br>Variance: %{value:.2f}<br>Contribution: %{customdata[0]:.1f}%')
         fig.update_layout(margin=dict(t=40, l=0, r=0, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
