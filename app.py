@@ -26,7 +26,7 @@ st.header("Executive Summary: Assay Transfer & Risk Posture")
 total_projects = len(projects_df)
 active_projects = projects_df[projects_df['Overall Status'] != 'Complete'].shape[0]
 vv_phase_projects = projects_df[projects_df['Current Phase'] == 'Validation'].shape[0]
-high_risk_score_items = risks_df[risks_df['Risk_Score'] >= 8].shape[0] # Adjusted threshold for higher impact
+high_risk_score_items = risks_df[risks_df['Risk_Score'] >= 8].shape[0]
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Active Assay Transfers", f"{active_projects}")
@@ -61,11 +61,11 @@ with col1:
         hover_data={
             "Project Lead": True,
             "Overall Status": True,
-            "Product Line": True,  # Added custom data for more context
+            "Product Line": True,
             "Start Date": "|%B %d, %Y",
             "Due Date": "|%B %d, %Y",
         },
-        color_discrete_map={ # Custom colors for better visual distinction
+        color_discrete_map={
             'Design': '#1f77b4',
             'Development': '#ff7f0e',
             'Validation': '#2ca02c',
@@ -89,7 +89,6 @@ with col2:
         yaxis=dict(tickvals=[1, 2, 3, 4, 5], ticktext=['Negligible', 'Minor', 'Moderate', 'Serious', 'Critical'], title='Impact on Product/Project'),
         coloraxis_showscale=False
     )
-    # Add risk zones for clarity
     fig_risk.add_shape(type="rect", xref="x", yref="y", x0=3.5, y0=3.5, x1=5.5, y1=5.5, fillcolor="rgba(255, 0, 0, 0.2)", layer="below", line_width=0)
     fig_risk.add_annotation(x=4.5, y=4.5, text="High Risk Zone", showarrow=False, font=dict(color="red", size=14, family="Arial, bold"))
     st.plotly_chart(fig_risk, use_container_width=True)
