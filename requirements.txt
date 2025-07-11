@@ -1,11 +1,18 @@
+# Core Application & Data Handling
 streamlit
 pandas
 numpy
+
+# Visualization
 plotly
+matplotlib
+
+# Statistics & Optimization
 scipy
 statsmodels
+
+# Machine Learning & Explainability
 scikit-learn
-shap
-matplotlib
 lightgbm
+shap
 tensorflow
