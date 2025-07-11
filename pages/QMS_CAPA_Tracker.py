@@ -39,7 +39,7 @@ col4.metric("Avg. CAPA Cycle Time (Days)", f"{avg_cycle_time_days}")
 
 st.divider()
 
-# --- NEW: Non-Conformance & OOS Investigation Tracker ---
+# --- 2. Active Non-Conformance & OOS Investigation Tracker ---
 st.header("2. Active Non-Conformance & OOS Investigation Tracker")
 st.caption("Real-time status of technical investigations led by Operations scientists *before* they escalate to a full CAPA.")
 try:
