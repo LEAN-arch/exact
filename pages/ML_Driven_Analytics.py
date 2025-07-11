@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import shap
 from utils import (generate_instrument_health_data, train_instrument_model,
-                   train_rca_model, generate_rca_data) # generate_rca_data is now fixed in memory to return RAW data
+                   train_rca_model, generate_rca_data)
 
 st.set_page_config(page_title="ML-Driven Analytics | Exact Sciences", layout="wide")
 st.title("🤖 ML-Driven Process & Instrument Analytics")
@@ -71,17 +71,16 @@ with tab1:
             shap_values_for_plot = shap_values[1] if isinstance(shap_values, list) else shap_values
             base_value = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
 
-            # --- FIX: Explicitly capture the plot object from SHAP and pass it to st.pyplot ---
+            # Correctly capture the plot object from SHAP and pass it to st.pyplot
             force_plot = shap.force_plot(
                 base_value,
                 shap_values_for_plot[last_instance_idx,:],
                 X.iloc[last_instance_idx,:],
                 matplotlib=True,
-                show=False # Important: Do not let SHAP try to show the plot itself
+                show=False
             )
             st.pyplot(force_plot, bbox_inches='tight')
             plt.clf()
-            # --- END OF FIX ---
 
         with st.expander("📊 **Results & Analysis**"):
             st.markdown("""
@@ -117,14 +116,12 @@ with tab2:
         """)
 
     try:
-        # --- FIX: Separate data generation from encoding ---
-        # 1. Generate the raw data with original categorical columns. The function in utils.py is now corrected in memory.
+        # Generate the raw data with original categorical columns
         rca_df_raw = generate_rca_data()
 
-        # 2. Create the encoded dataframe for model training
+        # Create the encoded dataframe for model training
         rca_df_encoded = pd.get_dummies(rca_df_raw, columns=['Instrument ID', 'Operator ID'], drop_first=True)
         model, X_encoded, y = train_rca_model(rca_df_encoded)
-        # --- END OF FIX ---
 
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -145,10 +142,9 @@ with tab2:
             instrument = st.selectbox("Instrument ID", rca_df_raw['Instrument ID'].unique())
             operator = st.selectbox("Operator ID", rca_df_raw['Operator ID'].unique())
 
-            # --- FIX: Correctly encode the user's input for prediction ---
+            # Correctly encode the user's input for prediction
             input_data = pd.DataFrame([[reagent, instrument, operator]], columns=['Reagent Lot Age (days)', 'Instrument ID', 'Operator ID'])
             input_encoded = pd.get_dummies(input_data).reindex(columns=X_encoded.columns, fill_value=0)
-            # --- END OF FIX ---
             
             prediction = model.predict(input_encoded)
             prediction_proba = model.predict_proba(input_encoded)
