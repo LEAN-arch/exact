@@ -9,263 +9,343 @@ from datetime import date, timedelta
 from scipy import stats
 from scipy.optimize import minimize
 
-# --- MODIFIED: Updated ML library imports ---
+# --- ML/Advanced Analytics Library Imports ---
 import lightgbm as lgb
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, PolynomialFeatures, StandardScaler
 from sklearn.linear_model import LinearRegression
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras import layers
 
-# --- Custom Plotly Template for Elegance ---
-scientist_template = {
+# --- Custom Plotly Template for Exact Sciences ---
+# A professional, clean template for all visualizations
+exact_sciences_template = {
     "layout": {
-        "font": {"family": "sans-serif", "size": 12, "color": "#333"},
-        "title": {"font": {"family": "sans-serif", "size": 18, "color": "#111"}},
-        "plot_bgcolor": "#f0f2f6",
-        "paper_bgcolor": "#ffffff",
-        "colorway": px.colors.qualitative.D3,
-        "xaxis": {"gridcolor": "#ddd", "linecolor": "#666", "zerolinecolor": "#ddd"},
-        "yaxis": {"gridcolor": "#ddd", "linecolor": "#666", "zerolinecolor": "#ddd"},
+        "font": {"family": "Helvetica, Arial, sans-serif", "size": 12, "color": "#333333"},
+        "title": {"font": {"family": "Helvetica, Arial, sans-serif", "size": 18, "color": "#1A3A6D"}, "x": 0.05},
+        "plot_bgcolor": "#FFFFFF",
+        "paper_bgcolor": "#FFFFFF",
+        "colorway": px.colors.qualitative.Plotly,
+        "xaxis": {"gridcolor": "#E5E5E5", "linecolor": "#B0B0B0", "zerolinecolor": "#E5E5E5", "title_font": {"size": 14}},
+        "yaxis": {"gridcolor": "#E5E5E5", "linecolor": "#B0B0B0", "zerolinecolor": "#E5E5E5", "title_font": {"size": 14}},
+        "legend": {"bgcolor": "rgba(255,255,255,0.85)", "bordercolor": "#CCCCCC", "borderwidth": 1}
     }
 }
-pio.templates["scientist"] = scientist_template
-pio.templates.default = "scientist"
+pio.templates["exact_sciences"] = exact_sciences_template
+pio.templates.default = "exact_sciences"
+
+# === CORE DATA GENERATION (Adapted for Exact Sciences) ===
 
 def generate_project_data():
-    """MODIFIED: Ensures date columns have the correct datetime64 dtype to prevent errors."""
+    """Generates project data specific to Exact Sciences' product pipeline and transfer activities."""
     data = {
-        'Project/Assay': ['NGS-Assay-X', 'RT-PCR-Assay-Y', 'HPLC-Method-Z', 'QC-LIMS-Script-A'],
-        'Project Lead': ['S. Scientist', 'S. Scientist', 'J. Doe', 'S. Scientist'],
-        'Current Phase': ['Validation', 'Development', 'Monitoring', 'Design'], 'Completion %': [75, 40, 100, 15],
-        'Overall Status': ['On Track', 'At Risk', 'Complete', 'On Track'],
-        'Start Date': [date.today() - timedelta(days=45), date.today() - timedelta(days=20), date.today() - timedelta(days=90), date.today() - timedelta(days=5)],
-        'Due Date': [date.today() + timedelta(days=14), date.today() + timedelta(days=25), date.today() - timedelta(days=30), date.today() + timedelta(days=40)],
+        'Project/Assay': [
+            'Oncotype DX® QC Software Pipeline v2.1',
+            'Cologuard® Reagent Qualification (HPLC)',
+            'OncoExTra® Library Prep Automation Script',
+            'Riskguard™ Bioinformatics Pipeline Update',
+            'Cologuard® Methylation Assay Control Monitoring'
+        ],
+        'Product Line': ['Oncotype DX', 'Cologuard', 'OncoExTra', 'Riskguard', 'Cologuard'],
+        'Project Lead': ['S. Scientist', 'J. Doe', 'S. Scientist', 'A. Turing', 'S. Scientist'],
+        'Current Phase': ['Validation', 'Development', 'Design', 'On Hold', 'Monitoring'],
+        'Completion %': [85, 50, 20, 95, 100],
+        'Overall Status': ['On Track', 'At Risk', 'On Track', 'On Hold', 'Complete'],
+        'Start Date': [date.today() - timedelta(days=60), date.today() - timedelta(days=30), date.today() - timedelta(days=10), date.today() - timedelta(days=120), date.today() - timedelta(days=180)],
+        'Due Date': [date.today() + timedelta(days=20), date.today() + timedelta(days=45), date.today() + timedelta(days=60), date.today() + timedelta(days=15), date.today() - timedelta(days=90)],
     }
     df = pd.DataFrame(data)
-
-    # --- THIS IS THE CRUCIAL FIX ---
-    # Explicitly convert the date columns to pandas datetime objects.
-    # This ensures that subsequent operations (like subtraction) result in a
-    # Series with the correct timedelta64 dtype, which supports the .dt accessor.
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['Due Date'] = pd.to_datetime(df['Due Date'])
-
     return df
 
 def generate_risk_data():
+    """Generates risk data relevant to molecular diagnostics and software transfer."""
     data = {
-        'Risk ID': ['R-01', 'R-02', 'R-03', 'R-04', 'R-05'],
-        'Project': ['RT-PCR-Assay-Y', 'NGS-Assay-X', 'NGS-Assay-X', 'QC-LIMS-Script-A', 'RT-PCR-Assay-Y'],
-        'Description': ['Key reagent supplier has long lead time.', 'Unexpected noise in baseline signal.', 'Bioinformatics pipeline validation requires more compute time.', 'Cloud environment has intermittent latency.', 'Instrument availability conflict with R&D.'],
-        'Impact': ['High', 'High', 'Medium', 'Low', 'Medium'], 'Probability': ['Medium', 'Low', 'High', 'Medium', 'High'],
-        'Owner': ['S. Scientist', 'J. Doe', 'S. Scientist', 'IT', 'Ops Manager'],
+        'Risk ID': ['R-ODX-01', 'R-CG-01', 'R-OEX-01', 'R-SW-01', 'R-SUP-01'],
+        'Project': [
+            'Oncotype DX® QC Software Pipeline v2.1',
+            'Cologuard® Methylation Assay Control Monitoring',
+            'OncoExTra® Library Prep Automation Script',
+            'Riskguard™ Bioinformatics Pipeline Update',
+            'Cologuard® Reagent Qualification (HPLC)'
+        ],
+        'Description': [
+            'Algorithm change may impact Recurrence Score® reproducibility at clinical cutoffs.',
+            'New bisulfite conversion kit lot shows minor shift in performance.',
+            'Variability in plasticware affects automated liquid handling accuracy.',
+            'Cloud computing environment upgrade may break legacy code dependencies.',
+            'Single-source supplier for a critical HPLC column faces production delays.'
+        ],
+        'Impact': ['Critical', 'Moderate', 'Serious', 'Serious', 'High'],
+        'Probability': ['Low', 'High', 'Medium', 'Medium', 'Medium'],
+        'Owner': ['S. Scientist', 'QC Ops', 'MSAT', 'IT / Bioinformatics', 'Supply Chain'],
+        'Mitigation': ['Extensive validation with clinical samples.', 'Perform guard-banding study.', 'Qualify secondary vendor.', 'Create containerized environment.', 'Qualify second source column.']
     }
-    df = pd.DataFrame(data); impact_map = {'Low': 1, 'Medium': 2, 'High': 3}; prob_map = {'Low': 1, 'Medium': 2, 'High': 3}
-    df['Impact_Score'] = df['Impact'].map(impact_map); df['Prob_Score'] = df['Probability'].map(prob_map)
+    df = pd.DataFrame(data)
+    impact_map = {'Negligible': 1, 'Minor': 2, 'Moderate': 3, 'Serious': 4, 'Critical': 5}
+    prob_map = {'Very Low': 1, 'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5}
+    df['Impact_Score'] = df['Impact'].map(impact_map).fillna(df['Impact'].map({'High': 4})) # Handle mixed terms
+    df['Prob_Score'] = df['Probability'].map(prob_map).fillna(df['Probability'].map({'Medium': 3, 'High': 4}))
     df['Risk_Score'] = df['Impact_Score'] * df['Prob_Score']
     return df.sort_values(by='Risk_Score', ascending=False)
 
+# === ASSAY VALIDATION DATA (Adapted for Exact Sciences) ===
+
 def generate_linearity_data():
-    expected = np.array([10, 50, 100, 250, 500, 750, 1000])
-    non_linear_factor = 1 - (expected / 4000)
-    observed = (expected * np.random.normal(1.02, 0.03, expected.shape) + np.random.normal(0, 5, expected.shape)) * non_linear_factor
-    return pd.DataFrame({'Expected Concentration': expected, 'Observed Signal': observed})
+    """Generates linearity data for a quantitative RT-PCR assay (e.g., Oncotype DX® target gene)."""
+    expected_log = np.array([2, 3, 4, 5, 6, 7]) # Log10 copies/reaction
+    # Simulate PCR plateau effect for non-linearity
+    ct_values = 38 - 3.3 * (expected_log - (expected_log**2 / 20))
+    # Add random noise
+    observed_ct = ct_values + np.random.normal(0, 0.15, expected_log.shape)
+    return pd.DataFrame({'Log10 Target Concentration': expected_log, 'Observed Ct Value': observed_ct})
 
 def generate_precision_data():
+    """Generates precision data (Ct values) for an Oncotype DX® QC sample."""
     days = ['Day 1', 'Day 2', 'Day 3']; operators = ['Op 1', 'Op 2']; data = []
+    # Simulate a small operator bias and increased variability on one day
     for day in days:
         for op in operators:
-            mean = 101 if op == 'Op 2' else 99; stdev = 1.8 if day == 'Day 3' else 1.2
-            values = np.random.normal(loc=mean, scale=stdev, size=5)
-            for val in values: data.append({'Day': day, 'Operator': op, 'Value': val})
+            mean_ct = 24.6 if op == 'Op 1' else 24.75 # Small systematic bias
+            stdev_ct = 0.25 if day == 'Day 3' else 0.15 # Higher noise on Day 3
+            values = np.random.normal(loc=mean_ct, scale=stdev_ct, size=5)
+            for val in values: data.append({'Day': day, 'Operator': op, 'Ct Value': val})
     return pd.DataFrame(data)
 
-def generate_msa_data(): return {'part_var': 95.2, 'repeatability_var': 2.8, 'reproducibility_var': 2.0}
+def generate_msa_data():
+    """Generates MSA data for a Cologuard® methylation assay signal."""
+    return {'part_var': 85.0, 'repeatability_var': 5.0, 'reproducibility_var': 10.0} # Higher reproducibility issue
+
+def generate_specificity_data():
+    """Generates specificity data for a Cologuard® methylation marker, testing for interference."""
+    np.random.seed(33); data = []
+    # Signal is % Methylation
+    data.extend([{'Sample Type': 'NTC (No Template Control)', 'Signal (% Meth)': v} for v in np.random.uniform(0.1, 0.5, 10)])
+    data.extend([{'Sample Type': 'Methylated Control', 'Signal (% Meth)': v} for v in np.random.normal(95, 2, 10)])
+    data.extend([{'Sample Type': 'Interferent (Hemoglobin)', 'Signal (% Meth)': v} for v in np.random.uniform(0.2, 0.8, 10)])
+    data.extend([{'Sample Type': 'Interferent (Bilirubin)', 'Signal (% Meth)': v} for v in np.random.uniform(0.2, 0.7, 10)])
+    # Simulate PCR inhibition from hemoglobin
+    data.extend([{'Sample Type': 'Control + Interferents', 'Signal (% Meth)': v} for v in np.random.normal(88, 3, 10)])
+    return pd.DataFrame(data)
+
+# === QC PERFORMANCE DATA (Adapted for Exact Sciences) ===
 
 def generate_spc_data():
-    np.random.seed(42); data = np.random.normal(loc=100, scale=1.5, size=30); data[10] = 104; data[11] = 103.5; data[15] = 105.1; data[20:24] = [102.5, 102.8, 103.1, 103.5]
-    return pd.DataFrame({'Value': data, 'Run': range(1, 31)})
+    """Generates Levey-Jennings data (Ct values) for an Oncotype DX® positive control."""
+    np.random.seed(42);
+    mean_ct = 25.0; std_ct = 0.2
+    data = np.random.normal(loc=mean_ct, scale=std_ct, size=30)
+    # Simulate a downward shift (more efficient PCR)
+    data[15:20] = data[15:20] - 0.3
+    # Simulate a single upward flyer (less efficient)
+    data[25] = mean_ct + 3.5 * std_ct
+    return pd.DataFrame({'Ct Value': data, 'Run': range(1, 31)})
 
-def generate_lot_data():
-    np.random.seed(0); lots = ['Lot A', 'Lot B', 'Lot C (New)', 'Lot D']; data = []
-    for lot in lots:
-        mean = 104 if lot == 'Lot C (New)' else 100; values = np.random.normal(loc=mean, scale=1.5, size=20)
-        for val in values: data.append({'Lot ID': lot, 'Performance Metric': val})
-    return pd.DataFrame(data)
-
-def detect_westgard_rules(df, value_col='Value'):
+def detect_westgard_rules(df, value_col='Ct Value'):
+    """Detects Westgard rules, adapted for Ct values where lower is better."""
     mean = df[value_col].mean(); std = df[value_col].std(); violations = []
     for i in range(len(df)):
         val = df.loc[i, value_col]
+        # 1_3s rule
         if val > mean + 3 * std or val < mean - 3 * std: violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '1_3s'})
-        elif val > mean + 2 * std or val < mean - 2 * std:
-            if i > 0 and (df.loc[i-1, value_col] > mean + 2 * std or df.loc[i-1, value_col] < mean - 2 * std):
-                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '2_2s'})
-            else: violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '1_2s (Warning)'})
+        # 2_2s rule
+        if i >= 1:
+            last_2 = df.loc[i-1:i, value_col]
+            if all(last_2 > mean + 2 * std) or all(last_2 < mean - 2 * std):
+                violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '2_2s'})
+        # 4_1s rule
         if i >= 3:
             last_4 = df.loc[i-3:i, value_col]
             if all(last_4 > mean + std) or all(last_4 < mean - std):
                 violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '4_1s'})
-    return pd.DataFrame(violations).drop_duplicates(subset=['Run'])
+        # 10_x rule (trend)
+        if i >= 9:
+            last_10 = df.loc[i-9:i, value_col]
+            if all(last_10 > mean) or all(last_10 < mean):
+                violations.append({'Run': df.loc[i, 'Run'], 'Value': val, 'Rule': '10_x'})
+    # Return unique violations by run and rule type
+    return pd.DataFrame(violations).drop_duplicates(subset=['Run', 'Rule'])
 
-def generate_doe_data():
-    """Generates data simulating a Central Composite Design (CCD)."""
-    np.random.seed(42)
-    temp_levels = [-1.414, -1, -1, 1, 1, -1.414, 1.414, 0, 0, 0, 0, 0]
-    ph_levels   = [0, -1, 1, -1, 1, 0, 0, -1.414, 1.414, 0, 0, 0]
-    temp_real = np.array(temp_levels) * 10 + 60
-    ph_real   = np.array(ph_levels) * 0.5 + 7.5
-    true_yield = 80 + (5*np.array(temp_levels)) + (3*np.array(ph_levels)) - (6*np.array(temp_levels)**2) - (4*np.array(ph_levels)**2) + (2*np.array(temp_levels)*np.array(ph_levels))
-    measured_yield = true_yield + np.random.normal(0, 1.5, len(temp_real))
-    return pd.DataFrame({'Temperature (°C)': temp_real, 'pH': ph_real, 'Yield (%)': measured_yield})
-
-def fit_rsm_model_and_optimize(df):
-    """Fits a quadratic response surface model and finds the settings for maximum yield."""
-    X = df[['Temperature (°C)', 'pH']]; y = df['Yield (%)']
-    poly = PolynomialFeatures(degree=2, include_bias=False); X_poly = poly.fit_transform(X)
-    model = LinearRegression(); model.fit(X_poly, y)
-    def neg_yield(params):
-        temp, ph = params
-        x_in = pd.DataFrame([[temp, ph]], columns=['Temperature (°C)', 'pH'])
-        x_in_poly = poly.transform(x_in)
-        return -model.predict(x_in_poly)[0]
-    initial_guess = [X['Temperature (°C)'].mean(), X['pH'].mean()]
-    bounds = [(X['Temperature (°C)'].min(), X['Temperature (°C)'].max()), (X['pH'].min(), X['pH'].max())]
-    result = minimize(neg_yield, initial_guess, method='L-BFGS-B', bounds=bounds)
-    opt_settings = result.x; max_yield = -result.fun
-    return model, poly, opt_settings, max_yield
-
-def generate_instrument_health_data():
-    """Generates more realistic multivariate time-series data with non-linear drift."""
-    np.random.seed(101); runs = 100
-    base_pressure = 1500 + 15 * np.sin(np.linspace(0, 3 * np.pi, runs)); pressure = base_pressure + np.random.normal(0, 5, runs)
-    base_temp = 35 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, runs)); temperature = base_temp + np.random.normal(0, 0.1, runs)
-    drift = np.exp(np.linspace(0, 2.5, 20)); pressure[80:] += drift * 2; temperature[80:] += drift / 10
-    flow_rate_stability = np.random.normal(0.99, 0.005, runs); flow_rate_stability[85:] -= np.logspace(-3, -1.5, 15)
-    
-    # BEST PRACTICE FIX: Using underscores to prevent LightGBM warning
-    df = pd.DataFrame({
-        'Run_ID': range(runs), 
-        'Pressure_psi': pressure, 
-        'Column_Temp_C': temperature, 
-        'Flow_Rate_Stability': flow_rate_stability
-    })
-    df['Failure'] = 0; df.loc[90:, 'Failure'] = 1
-    return df
-
-def generate_golden_batch_data():
-    """Generates a 'golden batch' of normal multivariate QC data for autoencoder training."""
-    np.random.seed(123)
-    data = []
-    for i in range(200):
-        op_noise = np.random.normal(0, 0.1); lot_noise = np.random.normal(0, 0.2); val = 100 + op_noise + lot_noise + np.random.normal(0, 1.5)
-        sensor1 = 5.0 + (val - 100) * 0.1 + np.random.normal(0, 0.05); sensor2 = 22.5 - (val - 100) * 0.05 + np.random.normal(0, 0.1)
-        data.append({'Value': val, 'Sensor 1': sensor1, 'Sensor 2': sensor2})
+def generate_lot_data():
+    """Generates lot-to-lot data for an OncoExTra® library prep kit (yield in ng)."""
+    np.random.seed(0); lots = ['Lot A (Ref)', 'Lot B', 'Lot C', 'Lot D (New)']; data = []
+    for lot in lots:
+        mean_yield = 75 if lot == 'Lot D (New)' else 90 # New lot has lower yield
+        stdev = 8 if lot == 'Lot D (New)' else 5
+        values = np.random.normal(loc=mean_yield, scale=stdev, size=20)
+        for val in values: data.append({'Lot ID': lot, 'Library Yield (ng)': val})
     return pd.DataFrame(data)
 
-def generate_live_qc_data(golden_df):
-    """Generates live data including anomalies, based on the golden batch distribution."""
-    live_data = []
-    for i in range(50):
-        val = np.random.normal(100, 1.5); sensor1 = 5.0 + (val - 100) * 0.1 + np.random.normal(0, 0.05)
-        sensor2 = 22.5 - (val - 100) * 0.05 + np.random.normal(0, 0.1)
-        live_data.append({'Value': val, 'Sensor 1': sensor1, 'Sensor 2': sensor2, 'Run': i})
-    for i in range(50, 60):
-        val = 100 + (i-50)*0.2; sensor1 = 5.0 + (val-100)*0.1 + (i-50)*0.05; sensor2 = 22.5 - (val-100)*0.05
-        live_data.append({'Value': val, 'Sensor 1': sensor1, 'Sensor 2': sensor2, 'Run': i})
-    live_data.append({'Value': 110, 'Sensor 1': 4.8, 'Sensor 2': 25.0, 'Run': 60})
-    return pd.DataFrame(live_data)
-
-def generate_rca_data():
-    np.random.seed(0); n_samples = 200; instrument_age = np.random.randint(1, 36, n_samples)
-    reagent_lot_age = np.random.randint(1, 90, n_samples); operator_experience = np.random.randint(1, 5, n_samples); causes = []
-    for i in range(n_samples):
-        if reagent_lot_age[i] > 75 or (reagent_lot_age[i] > 60 and np.random.rand() > 0.3): causes.append('Reagent Degradation')
-        elif instrument_age[i] > 30 or (instrument_age[i] > 20 and np.random.rand() > 0.5): causes.append('Instrument Drift')
-        elif operator_experience[i] == 1 and np.random.rand() > 0.4: causes.append('Operator Error')
-        else: causes.append('No Fault Found')
-    return pd.DataFrame({'Instrument Age (mo)': instrument_age, 'Reagent Lot Age (days)': reagent_lot_age, 'Operator Experience (yr)': operator_experience, 'Root Cause': causes})
-
-def train_autoencoder_model(golden_df):
-    """Trains a Keras Autoencoder on normal data only."""
-    scaler = StandardScaler(); X_train = scaler.fit_transform(golden_df)
-    n_features = X_train.shape[1]
-    model = keras.Sequential([
-        layers.Input(shape=(n_features,)),
-        layers.Dense(n_features, activation='relu'),
-        layers.Dense(2, activation='relu', name="bottleneck"),
-        layers.Dense(n_features, activation='relu'),
-        layers.Dense(n_features, activation='linear')
-    ])
-    model.compile(optimizer='adam', loss='mae')
-    model.fit(X_train, X_train, epochs=50, batch_size=16, validation_split=0.1, verbose=0)
-    return model, scaler
-
-def train_instrument_model(df):
-    """UPGRADED: Trains a LightGBM model to predict instrument failure."""
-    # Using the new column names with underscores
-    X = df[['Pressure_psi', 'Column_Temp_C', 'Flow_Rate_Stability']]; y = df['Failure']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    # BEST PRACTICE: Suppress verbose output in logs
-    model = lgb.LGBMClassifier(random_state=42, verbosity=-1)
-    model.fit(X_train, y_train)
-    return model, X
-
-def train_rca_model(df):
-    """UPGRADED: Trains a robust RandomForest model for Root Cause Analysis."""
-    X = df.drop('Root Cause', axis=1); y = df['Root Cause']
-    model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-    model.fit(X, y)
-    return model, X, y
-
-# --- NEW: Specificity/Interference Data Generation ---
-def generate_specificity_data():
-    """Generates data for an assay specificity and interference study."""
-    np.random.seed(33); data = []
-    data.extend([{'Sample Type': 'Blank', 'Signal': v} for v in np.random.normal(10, 2, 10)])
-    data.extend([{'Sample Type': 'Target Only', 'Signal': v} for v in np.random.normal(200, 15, 10)])
-    data.extend([{'Sample Type': 'Interferent A', 'Signal': v} for v in np.random.normal(12, 3, 10)])
-    data.extend([{'Sample Type': 'Interferent B', 'Signal': v} for v in np.random.normal(15, 4, 10)])
-    data.extend([{'Sample Type': 'Target + Interferents', 'Signal': v} for v in np.random.normal(195, 16, 10)]) # Slight suppression
-    return pd.DataFrame(data)
-
-# --- NEW: Process Capability Index (Cpk) Calculation ---
 def calculate_cpk(data_series, usl, lsl):
     """Calculates the Cpk for a given series of data and spec limits."""
     mean = data_series.mean()
     std_dev = data_series.std()
-    if std_dev == 0:
-        return np.inf
+    if std_dev == 0: return np.inf
     cpu = (usl - mean) / (3 * std_dev)
     cpl = (mean - lsl) / (3 * std_dev)
     return min(cpu, cpl)
 
-# --- NEW: Software V&V Data Generation ---
+# === DOE DATA (Adapted for Exact Sciences) ===
 
+def generate_doe_data():
+    """Generates DOE data for an RT-PCR annealing step optimization."""
+    np.random.seed(42)
+    temp_levels = np.array([-1.414, -1, 1, -1, 1, 0, 0, 0, 0, -1.414, 1.414])
+    primer_levels = np.array([0, -1, -1, 1, 1, -1.414, 1.414, 0, 0, 0, 0])
+    
+    temp_real = temp_levels * 2 + 60  # e.g., 58-62 °C range
+    primer_real = primer_levels * 50 + 200 # e.g., 150-250 nM range
+
+    # Simulate ideal efficiency at a specific point, with interaction
+    true_efficiency = 95 - (2*temp_levels**2) - (3*primer_levels**2) + (1.5*temp_levels*primer_levels)
+    measured_efficiency = true_efficiency + np.random.normal(0, 0.8, len(temp_real))
+    return pd.DataFrame({'Annealing Temp (°C)': temp_real, 'Primer Conc. (nM)': primer_real, 'PCR Efficiency (%)': measured_efficiency})
+
+def fit_rsm_model_and_optimize(df):
+    """Fits a quadratic response surface model and finds the settings for maximum efficiency."""
+    X = df.iloc[:, :-1]; y = df.iloc[:, -1]
+    poly = PolynomialFeatures(degree=2, include_bias=False); X_poly = poly.fit_transform(X)
+    model = LinearRegression(); model.fit(X_poly, y)
+    def neg_response(params):
+        x_in = pd.DataFrame([params], columns=X.columns)
+        x_in_poly = poly.transform(x_in)
+        return -model.predict(x_in_poly)[0]
+    initial_guess = [X.iloc[:,0].mean(), X.iloc[:,1].mean()]
+    bounds = [(X.iloc[:,0].min(), X.iloc[:,0].max()), (X.iloc[:,1].min(), X.iloc[:,1].max())]
+    result = minimize(neg_response, initial_guess, method='L-BFGS-B', bounds=bounds)
+    return model, poly, result.x, -result.fun
+
+# === ML ANALYTICS DATA (Adapted for Exact Sciences) ===
+
+def generate_instrument_health_data():
+    """Generates health data for an NGS Sequencer (e.g., NovaSeq)."""
+    np.random.seed(101); runs = 100
+    # Simulate laser power degradation and flow cell temperature instability
+    laser_power_A = 85 - np.linspace(0, 5, runs) + np.random.normal(0, 0.2, runs)
+    flow_cell_temp_C = 50 + np.random.normal(0, 0.1, runs)
+    # Simulate a pump issue causing pressure fluctuations
+    pump_pressure_psi = 10 + np.sin(np.linspace(0, 10 * np.pi, runs)) * 0.5 + np.random.normal(0, 0.1, runs)
+    
+    # Introduce a failure event
+    laser_power_A[85:] -= np.logspace(0, 1, 15)
+    flow_cell_temp_C[90:] += np.random.normal(0.5, 0.2, 10)
+
+    df = pd.DataFrame({
+        'Run_ID': range(runs), 'Laser_A_Power': laser_power_A,
+        'Flow_Cell_Temp_C': flow_cell_temp_C, 'Pump_Pressure_psi': pump_pressure_psi
+    })
+    df['Failure'] = 0; df.loc[92:, 'Failure'] = 1
+    return df
+
+def train_instrument_model(df):
+    """Trains a LightGBM model to predict sequencer failure."""
+    X = df.drop(['Failure', 'Run_ID'], axis=1); y = df['Failure']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    model = lgb.LGBMClassifier(random_state=42, verbosity=-1)
+    model.fit(X_train, y_train)
+    return model, X
+
+def generate_rca_data():
+    """Generates Root Cause Analysis data for Cologuard® assay failures."""
+    np.random.seed(0); n_samples = 200
+    reagent_lot_age = np.random.randint(1, 120, n_samples)
+    operator_id = np.random.choice([101, 102, 103, 104], n_samples, p=[0.4, 0.3, 0.2, 0.1])
+    instrument_id = np.random.choice(['HML-01', 'HML-02', 'PCR-05'], n_samples, p=[0.5, 0.3, 0.2])
+    causes = []
+    for i in range(n_samples):
+        if 'HML-02' == instrument_id[i] and np.random.rand() > 0.4: causes.append('Liquid Handler Pipetting Error')
+        elif reagent_lot_age[i] > 90 or (reagent_lot_age[i] > 75 and np.random.rand() > 0.5): causes.append('Reagent Degradation')
+        elif 104 == operator_id[i] and np.random.rand() > 0.6: causes.append('Operator/Sample Handling')
+        else: causes.append('No Fault Found')
+    df = pd.DataFrame({'Reagent Lot Age (days)': reagent_lot_age, 'Operator ID': operator_id, 'Instrument ID': instrument_id, 'Root Cause': causes})
+    # One-hot encode categorical features for modeling
+    return pd.get_dummies(df, columns=['Instrument ID', 'Operator ID'], drop_first=True)
+
+
+def train_rca_model(df):
+    """Trains a RandomForest model for Cologuard® Root Cause Analysis."""
+    X = df.drop('Root Cause', axis=1); y = df['Root Cause']
+    model = RandomForestClassifier(n_estimators=100, max_depth=7, random_state=42, class_weight='balanced')
+    model.fit(X, y)
+    return model, X, y
+
+# === SOFTWARE V&V and OPS DATA (Adapted for Exact Sciences) ===
+
+def generate_traceability_data():
+    """Generates traceability data for an Oncotype DX® QC software validation."""
+    return {
+        'Requirement ID': ['URS-01', 'URS-02', 'URS-03', 'URS-04'],
+        'User Requirement (URS)': [
+            'System shall correctly calculate Recurrence Score® from input Ct values.',
+            'System shall flag runs if Positive Control Ct is outside of spec.',
+            'System must be 21 CFR Part 11 compliant with audit trails.',
+            'System shall generate a locked PDF report of results.'
+        ],
+        'Functional Spec (FRS)': ['FRS-1.1, FRS-1.2', 'FRS-2.1', 'FRS-3.1, FRS-3.2', 'FRS-4.1'],
+        'Test Case ID': ['TC-CALC-001-005', 'TC-FLAG-001-003', 'TC-P11-001-008', 'TC-RPT-001'],
+        'Test Status': ['Pass', 'Pass', 'Fail', 'In Progress']
+    }
+
+def generate_defect_category_data():
+    """Generates defect Pareto data for a bioinformatics pipeline."""
+    return pd.DataFrame({
+        'Category': ['Bioinformatics Algorithm', 'Data I/O & Parsing', 'UI/UX', 'Database Integration', 'Performance/Speed', 'Reporting'],
+        'Count': [15, 8, 5, 3, 2, 1]
+    }).sort_values('Count', ascending=False)
+
+def generate_instrument_schedule_data():
+    """Generates schedule data for high-complexity molecular diagnostics instruments."""
+    today = pd.Timestamp.now().normalize()
+    data = [
+        {'Instrument': 'NovaSeq-01', 'Start': today - timedelta(hours=8), 'Finish': today + timedelta(days=2), 'Status': 'In Use', 'Details': 'OncoExTra Batch 24-101'},
+        {'Instrument': 'NovaSeq-02', 'Start': today - timedelta(days=1), 'Finish': today + timedelta(days=1), 'Status': 'OOS', 'Details': 'OOS-451: Flow Cell Temp Failure'},
+        {'Instrument': 'Hamilton-01', 'Start': today + timedelta(hours=1), 'Finish': today + timedelta(hours=5), 'Status': 'Scheduled', 'Details': 'Cologuard Lib Prep Validation'},
+        {'Instrument': 'Hamilton-02', 'Start': today, 'Finish': today + timedelta(days=2), 'Status': 'Available', 'Details': 'Open for scheduling'},
+        {'Instrument': 'QuantStudio-01', 'Start': today - timedelta(days=2), 'Finish': today, 'Status': 'PM Due', 'Details': 'Annual Preventative Maintenance'},
+        {'Instrument': 'QuantStudio-02', 'Start': today, 'Finish': today + timedelta(hours=3), 'Status': 'In Use', 'Details': 'Oncotype DX Batch 24-305'},
+    ]
+    return pd.DataFrame(data)
+
+def generate_training_data_for_heatmap():
+    """Generates training competency data for QC analysts at Exact Sciences."""
+    data = {
+        'SOP-001 (Safety)': [2, 2, 2, 2],
+        'TM-101 (HPLC)': [2, 2, 1, 0],
+        'TM-201 (Oncotype RT-PCR)': [2, 2, 2, 1],
+        'TM-202 (OncoExTra NGS Lib Prep)': [2, 1, 0, 0],
+        'SW-301 (OncoExTra Bioinformatics)': [2, 0, 0, 0],
+    }
+    df = pd.DataFrame(data, index=['S. Scientist (Lead)', 'Jane Smith (Sr. Analyst)', 'John Doe (Analyst)', 'Peter Jones (New Hire)'])
+    return df
+
+def generate_reagent_lot_status_data():
+    """Generates status data for critical reagent and consumable lots."""
+    today = date.today()
+    data = {
+        'Lot ID': ['CG-BC-2401', 'ODX-PK-2399', 'OEX-LPK-2405', 'OEX-LPK-2406', 'CG-EB-2350'],
+        'Reagent/Kit': ['Cologuard Bisulfite Conv.', 'Oncotype DX Probe Kit', 'OncoExTra Lib Prep Kit', 'OncoExTra Lib Prep Kit', 'Cologuard Elution Buffer'],
+        'Status': ['In Use', 'In Use', 'In Qualification', 'On Hold', 'Expired'],
+        'Expiry Date': [today + timedelta(days=90), today + timedelta(days=45), today + timedelta(days=180), today + timedelta(days=182), today - timedelta(days=5)],
+        'Quantity Remaining (%)': [60, 35, 100, 100, 0],
+        'Notes': ['Nominal performance.', 'Monitor closely, nearing re-order point.', 'Awaiting OOS investigation results.', 'DO NOT USE - Failed incoming QC.', 'Remove from inventory.']
+    }
+    return pd.DataFrame(data)
+
+
+# --- Keep other functions from previous version if they don't need adaptation ---
 def generate_v_model_data():
     """Returns coordinates and labels for drawing a V-Model diagram."""
     data = {
         'x': [1, 2, 3, 4, 5, 6, 7, 8],
         'y': [4, 3, 2, 1, 1, 2, 3, 4],
         'text': [
-            "User Requirements<br>(URS)", "System Design<br>(SDS)", "Architectural Design", "Module Design",
-            "Coding", "Unit Testing", "Integration Testing", "System & Acceptance<br>Testing (V&V)"
+            "User Requirements<br>(URS)", "System & Software<br>Requirements (SRS)", "Architectural Design", "Module Design",
+            "Coding &<br>Implementation", "Unit &<br>Component Testing", "Integration Testing", "System & Acceptance<br>Testing (V&V)"
         ]
     }
     return pd.DataFrame(data)
-
-def generate_traceability_data():
-    """Generates data for a requirements traceability matrix."""
-    return {
-        'User Need (URS)': ['URS-01: Must calculate final concentration', 'URS-02: Must flag failing samples', 'URS-03: Must generate a PDF report', 'URS-04: Must log all user actions'],
-        'Functional Spec (FRS)': ['FRS-01.1', 'FRS-02.1', 'FRS-03.1, FRS-03.2', 'FRS-04.1'],
-        'Test Case ID': ['TC-001, TC-002', 'TC-003', 'TC-004', 'TC-005'],
-        'Test Status': ['Pass', 'Pass', 'Fail', 'In Progress']
-    }
 
 def generate_defect_trend_data():
     """Generates time-series data for a defect burnup/burndown chart."""
@@ -276,51 +356,9 @@ def generate_defect_trend_data():
     closed[20:] = np.clip(closed[20:] + 5, 0, opened[20:]) # Simulate a push to close bugs
     return pd.DataFrame({'Date': dates, 'Opened': opened, 'Closed': closed})
 
-def generate_defect_category_data():
-    """Generates data for a defect Pareto chart."""
-    return pd.DataFrame({
-        'Category': ['UI/UX', 'Calculation Engine', 'Reporting', 'Data Handling', 'Performance'],
-        'Count': [12, 7, 5, 3, 1]
-    }).sort_values('Count', ascending=False)
-
 def generate_capa_source_data():
-    """Generates data for a CAPA source Pareto chart."""
+    """Generates data for a CAPA source Pareto chart specific to a diagnostics company."""
     return pd.DataFrame({
-        'Source': ['Out of Specification (OOS)', 'Internal Audit', 'Customer Complaint', 'Process Trend', 'Supplier Issue'],
-        'Count': [8, 5, 3, 2, 1]
+        'Source': ['Test Method OOS', 'Internal Audit', 'Bioinformatics Anomaly', 'Supplier Non-conformance', 'Customer Complaint (Clinical)', 'Process Trend'],
+        'Count': [12, 7, 5, 3, 2, 1]
     }).sort_values('Count', ascending=False)
-
-# utils.py
-
-# (Keep all previous functions from the last correct version)
-# ...
-
-# --- NEW: QC Operations Hub Data Generation ---
-
-def generate_instrument_schedule_data():
-    """Generates a list of events for an instrument schedule timeline."""
-    today = pd.Timestamp.now().normalize()
-    data = [
-        # HPLC-01: In use now
-        {'Instrument': 'HPLC-01', 'Start': today - timedelta(hours=4), 'Finish': today + timedelta(hours=4), 'Status': 'In Use', 'Details': 'Project A - Run 5'},
-        # HPLC-02: Available now, booked later
-        {'Instrument': 'HPLC-02', 'Start': today + timedelta(days=1), 'Finish': today + timedelta(days=1, hours=6), 'Status': 'Scheduled', 'Details': 'Project B - Run 1'},
-        # PCR-01: PM is overdue
-        {'Instrument': 'PCR-01', 'Start': today - timedelta(days=2), 'Finish': today + timedelta(days=1), 'Status': 'PM Due', 'Details': 'Annual preventative maintenance'},
-        # PCR-02: OOS for a few days
-        {'Instrument': 'PCR-02', 'Start': today - timedelta(days=4), 'Finish': today + timedelta(days=3), 'Status': 'Out of Spec', 'Details': 'OOS-123: Temperature out of range'},
-        # Hamilton-01: Booked next week
-        {'Instrument': 'Hamilton-01', 'Start': today + timedelta(days=3), 'Finish': today + timedelta(days=5), 'Status': 'Scheduled', 'Details': 'Method Transfer Validation'},
-    ]
-    return pd.DataFrame(data)
-
-def generate_training_data_for_heatmap():
-    """Generates numerical data for a training matrix heatmap."""
-    data = {
-        'TM-101 (HPLC)': [2, 2, 2, 1],
-        'TM-201 (PCR)': [2, 2, 0, 2],
-        'TM-202 (NGS Lib Prep)': [1, 2, 0, 2],
-        'SOP-001 (Safety)': [2, 2, 2, 2]
-    }
-    df = pd.DataFrame(data, index=['John Doe', 'Jane Smith', 'Peter Jones', 'Susan Chen'])
-    return df
