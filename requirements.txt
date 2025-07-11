@@ -12,7 +12,9 @@ scipy
 statsmodels
 
 # Machine Learning & Explainability
+# Pinned to specific versions to resolve Python 3.11 dependency conflict
+shap==0.45.0
+numba>=0.58.1
 scikit-learn
 lightgbm
-shap
 tensorflow
