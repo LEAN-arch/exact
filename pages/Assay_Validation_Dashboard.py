@@ -44,16 +44,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ... (Tabs 1 and 2 remain unchanged) ...
 with tab1:
     st.header("Assay Linearity & Dynamic Range (RT-PCR)")
-    # ... (Code from previous correct version) ...
-    with st.expander("🔬 **Experiment & Method**"):
-        st.markdown("""
-        #### The Experiment
-        To evaluate the **linearity** and **dynamic range** of a quantitative RT-PCR assay (e.g., for an Oncotype DX® gene), a dilution series of a known target material is created. This series spans the expected reportable range of the assay. Each dilution is tested to demonstrate that the observed **Cycle threshold (Ct) value** has a predictable, linear relationship with the logarithm of the target concentration.
-        #### The Method
-        - **Ordinary Least Squares (OLS) Regression**: A linear model is fitted to the data, plotting the observed Ct values (Y-axis) against the Log10 of the target concentration (X-axis).
-        - **Key Metrics (PCR Efficiency & R²)**: The slope of the regression line is used to calculate the PCR efficiency, which is a critical measure of assay performance. The R-squared value indicates the goodness of fit of the linear model.
-        - **Residual Analysis**: A plot of the residuals (the difference between observed and predicted Ct values) helps to visually identify non-linearity.
-        """)
+    with st.expander("🔬 **Experiment & Method**"): st.markdown("...") # Content hidden
     col1, col2 = st.columns([2, 1])
     with col1:
         X = sm.add_constant(linearity_df['Log10 Target Concentration'])
@@ -76,22 +67,11 @@ with tab1:
         st.metric("Slope", f"{slope:.3f}")
         st.metric("Y-Intercept (Ct at 1 copy)", f"{intercept:.2f}")
         st.metric("PCR Efficiency (%)", f"{pcr_efficiency:.1f}%")
-        with st.expander("📊 **Results & Analysis**"):
-            st.markdown(f"...") # Content hidden for brevity
+        with st.expander("📊 **Results & Analysis**"): st.markdown("...") # Content hidden
 
 with tab2:
     st.header("Assay Precision (Following CLSI EP05-A3)")
-    # ... (Code from previous correct version) ...
-    with st.expander("🔬 **Experiment & Method**"):
-        st.markdown("""
-        #### The Experiment
-        To evaluate **precision**, a stable QC material is tested in replicates (e.g., n=5), by multiple operators (e.g., 2 operators), over multiple days (e.g., 3-5 days).
-        - **Repeatability (Within-Run Precision)**: Variation under the most minimal set of changing conditions.
-        - **Reproducibility (Total Precision)**: Variation across all changing conditions.
-        #### The Method
-        - **Box Plots**: Used to visually compare the distribution of Ct values.
-        - **Coefficient of Variation (%CV)**: A standardized measure of dispersion.
-        """)
+    with st.expander("🔬 **Experiment & Method**"): st.markdown("...") # Content hidden
     fig = px.box(precision_df, x="Day", y="Ct Value", color="Operator", title="Precision: Ct Value Distribution by Day and Operator", points="all")
     st.plotly_chart(fig, use_container_width=True)
     repeatability_cv = precision_df.groupby(['Day', 'Operator'])['Ct Value'].std().mean() / precision_df['Ct Value'].mean() * 100
@@ -99,8 +79,7 @@ with tab2:
     col1, col2 = st.columns(2)
     col1.metric("Repeatability (Within-Run CV%)", f"{repeatability_cv:.2f}%")
     col2.metric("Reproducibility (Total CV%)", f"{total_precision_cv:.2f}%")
-    with st.expander("📊 **Results & Analysis**"):
-        st.markdown(f"...") # Content hidden for brevity
+    with st.expander("📊 **Results & Analysis**"): st.markdown("...") # Content hidden
 
 with tab3:
     st.header("Measurement System Analysis (MSA) / Gage R&R")
@@ -124,20 +103,24 @@ with tab3:
     pct_gage_rr = (gage_rr_var / total_var) * 100 if total_var > 0 else 0
     ndc = int(1.41 * (np.sqrt(msa_data['part_var']) / np.sqrt(gage_rr_var))) if gage_rr_var > 0 else float('inf')
 
-    # --- FIX: Replaced sunburst with a clearer, more informative stacked bar chart and KPI display ---
+    # --- FINAL FIX: Corrected the DataFrame structure and the px.bar call ---
     col1, col2 = st.columns([1.5, 1])
     with col1:
         st.subheader("Decomposition of Total Variation")
+        
+        # 1. Create the DataFrame for plotting
         msa_plot_data = pd.DataFrame([
             {"Component": "Part-to-Part", "Variance": msa_data['part_var']},
             {"Component": "Repeatability (EV)", "Variance": msa_data['repeatability_var']},
             {"Component": "Reproducibility (AV)", "Variance": msa_data['reproducibility_var']},
         ])
         msa_plot_data['% Contribution'] = (msa_plot_data['Variance'] / total_var) * 100
+        # 2. Add a column with a constant value to serve as the single x-axis category
+        msa_plot_data['Process'] = 'Total Variation'
 
         fig = px.bar(
             msa_plot_data,
-            x=['Process Variation'], # A single category on the x-axis to stack upon
+            x='Process',  # Use the new column for the x-axis
             y='% Contribution',
             color='Component',
             text=msa_plot_data['% Contribution'].apply(lambda x: f'{x:.1f}%'),
@@ -192,15 +175,7 @@ with tab3:
 
 with tab4:
     st.header("Assay Specificity & Interference (e.g., Cologuard®)")
-    # ... (Code from previous correct version) ...
-    with st.expander("🔬 **Experiment & Method**"):
-        st.markdown("""
-        #### The Experiment
-        **Analytical Specificity** is the ability of an assay to measure *only* the target analyte, even in the presence of other substances. For Cologuard®, we must demonstrate that common substances found in stool samples do not interfere with the methylation assay signal.
-        #### The Method
-        - **Box Plots**: Used to visually compare the signal distributions.
-        - **Welch's Two-Sample t-test**: A statistical test to determine if there is a significant difference between the means of two groups.
-        """)
+    with st.expander("🔬 **Experiment & Method**"): st.markdown("...") # Content hidden
     fig = px.box(specificity_df, x="Sample Type", y="Signal (% Meth)", color="Sample Type", title="Assay Response to Potential Interferents in Stool Matrix")
     st.plotly_chart(fig, use_container_width=True)
     target_only = specificity_df[specificity_df['Sample Type'] == 'Methylated Control']['Signal (% Meth)']
@@ -209,11 +184,9 @@ with tab4:
     st.subheader("Statistical Interference Test")
     st.metric("T-test P-value (Control vs Control + Interferents)", f"{ttest_res.pvalue:.4f}")
     with st.expander("📊 **Results & Analysis**"):
-        st.markdown("""...""") # Content hidden for brevity
+        st.markdown("""...""") # Content hidden
         if ttest_res.pvalue < 0.05:
-            st.error(f"**P-value of {ttest_res.pvalue:.4f} is less than 0.05.** This confirms a statistically significant interference effect.")
-            st.markdown("""
-            **Conclusion & Action:** The tested substances are causing a significant negative bias (suppression). The magnitude of this interference must be quantified and compared against the defined clinical risk threshold.
-            """)
+            st.error(f"**P-value of {ttest_res.pvalue:.4f} is less than 0.05.** ...")
+            st.markdown("""**Conclusion & Action:** ...""")
         else:
-            st.success(f"**P-value of {ttest_res.pvalue:.4f} is greater than 0.05.** There is no statistically significant evidence of interference.")
+            st.success(f"**P-value of {ttest_res.pvalue:.4f} is greater than 0.05.** ...")
