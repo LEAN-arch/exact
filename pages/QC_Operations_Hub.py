@@ -59,7 +59,7 @@ with col1:
     today = pd.Timestamp.now()
     fig_schedule.add_shape(type="line", x0=today, y0=-0.5, x1=today, y1=len(schedule_df['Instrument'].unique()) - 0.5, line=dict(color="Red", width=2, dash="dash"))
     fig_schedule.add_annotation(x=today, y=1.05, yref='paper', text="Now", showarrow=False, font=dict(color="red", size=14))
-    fig_schedule.update_yaxes(categoryorder="array", categoryarray=schedule_df['Instrument'].unique()[::-1]) # Keep order stable
+    fig_schedule.update_yaxes(categoryorder="array", categoryarray=schedule_df['Instrument'].unique()[::-1])
     st.plotly_chart(fig_schedule, use_container_width=True)
 
 with col2:
@@ -78,7 +78,7 @@ with col2:
 
 st.divider()
 
-# --- NEW: Reagent Lot Management ---
+# --- 3. Reagent & Consumable Lot Management ---
 st.header("3. Reagent & Consumable Lot Management")
 st.caption("Tracking the status, expiry, and quantity of critical lots to ensure process consistency and prevent downtime.")
 reagent_df = generate_reagent_lot_status_data()
