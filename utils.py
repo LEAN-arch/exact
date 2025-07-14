@@ -331,91 +331,102 @@ def generate_capa_source_data():
 
 def mock_uniprot_api(target_id: str):
     """Simulates a call to the UniProt API to get protein information."""
-    if target_id == "P12345":
+    if target_id == "P01116":  # UniProt ID for KRAS
         return {
-            "Function": "Involved in the regulation of the MAP Kinase signaling pathway.",
-            "Subcellular Location": "Cytoplasm, Nucleus.",
-            "Pathway Association": "ERK1/ERK2 Cascade."
+            "Function": "Ras proteins bind GDP/GTP and possess intrinsic GTPase activity. Plays an important role in the regulation of cell proliferation and differentiation. Mutations in the KRAS gene are associated with various malignancies, including colorectal cancer.",
+            "Pathway Association": "EGFR signaling pathway, MAP Kinase signaling pathway"
         }
     return {}
 
 def mock_pubmed_api(query: str):
     """Simulates a call to the PubMed API to get recent publication titles."""
-    if "Target Kinase Z" in query:
+    if "KRAS G12C" in query:
         return [
-            "Upregulation of the ERK1/ERK2 Cascade Confers Resistance to Osimertinib in Lung Adenocarcinoma.",
-            "Target Kinase Z as a Novel Escape Pathway in BRAF-mutant Melanoma.",
-            "Synthetic Lethality between PARP inhibitors and MAP Kinase pathway activation."
+            "Combined KRAS G12C and EGFR Inhibition in Colorectal Cancer.",
+            "Mechanisms of acquired resistance to KRAS G12C-selective inhibitors.",
+            "SHP2 inhibition as a strategy to overcome resistance to KRAS G12C inhibitors."
         ]
     return []
 
-def generate_hypothesis(internal_data: dict, external_data: dict):
-    """Simulates an LLM call to generate therapeutic hypotheses."""
-    # In a real application, this would construct a prompt and call a generative AI model.
-    # Here, we return a hard-coded response matching the user's example for demonstration.
-    return [
+def generate_hypothesis_data(internal_data: dict, external_data: dict):
+    """Simulates an LLM call to generate therapeutic hypotheses and the data for plotting."""
+    hypotheses = [
         {
             "#": 1,
-            "Therapeutic Hypothesis": "Overcoming Acquired Resistance in Lung Cancer",
-            "Scientific Rationale": "The literature shows that the pathway our target belongs to (ERK1/ERK2) is a known resistance mechanism to existing lung cancer therapies like Osimertinib. Inhibiting Target Kinase Z with Cmpd-42 could re-sensitize resistant tumors.",
-            "Suggested \"Next Experiment\"": "Test Cmpd-42 in combination with Osimertinib on an Osimertinib-resistant lung adenocarcinoma cell line (e.g., H1975-OR). Look for synergistic cell killing."
+            "Therapeutic Hypothesis": "Overcome Acquired Resistance to KRAS G12C Inhibitors",
+            "Scientific Rationale": "The literature clearly shows adaptive resistance to KRAS G12C inhibitors (like Sotorasib) often involves reactivation of the EGFR/MAPK pathway. Our compound, targeting a downstream node, could re-sensitize resistant tumors.",
+            "Suggested \"Next Experiment\"": "Test Cmpd-X in combination with Sotorasib on a colorectal cancer cell line made resistant to Sotorasib (e.g., SW837-Resistant). Look for synergistic cell killing and inhibition of p-ERK."
         },
         {
             "#": 2,
-            "Therapeutic Hypothesis": "Targeting Intrinsic Resistance in Melanoma",
-            "Scientific Rationale": "A recent paper explicitly identifies our target as an escape pathway in BRAF-mutant melanoma. This suggests that Cmpd-42 could be effective as a monotherapy or combination therapy in this specific patient population.",
-            "Suggested \"Next Experiment\"": "Screen Cmpd-42 against a panel of BRAF-mutant melanoma cell lines (e.g., A375). Assess for cell viability and inhibition of downstream pathway markers."
+            "Therapeutic Hypothesis": "Companion Diagnostic for Cologuard® Positive Patients",
+            "Scientific Rationale": "A subset of Cologuard-positive patients have KRAS G12C mutations. A potent inhibitor of a key downstream target could be a viable therapeutic strategy for this specific, pre-identified patient population.",
+            "Suggested \"Next Experiment\"": "Screen Cmpd-X against a panel of KRAS G12C-mutant colorectal cancer cell lines (e.g., SW837, HCT-116). Assess for antiproliferative effects as a monotherapy."
         },
         {
             "#": 3,
-            "Therapeutic Hypothesis": "Synthetic Lethality with PARP Inhibitors",
-            "Scientific Rationale": "There is an emerging link between our target's pathway and synthetic lethality with PARP inhibitors. Combining Cmpd-42 with a PARP inhibitor (like Olaparib) could be a powerful new therapy, potentially in ovarian or breast cancer.",
-            "Suggested \"Next Experiment\"": "Perform a combination matrix study with Cmpd-42 and Olaparib on a BRCA-mutant ovarian cancer cell line (e.g., OVCAR-3). Calculate a synergy score."
+            "Therapeutic Hypothesis": "Synthetic Lethality with SHP2 Inhibition",
+            "Scientific Rationale": "PubMed data suggests SHP2 inhibition is an emerging strategy to potentiate KRAS G12C blockade. Combining our compound with a SHP2 inhibitor could provide a powerful, dual-node blockade of the MAPK pathway.",
+            "Suggested \"Next Experiment\"": "Perform a combination matrix study with Cmpd-X and a SHP2 inhibitor (e.g., TNO155) on multiple KRAS G12C-mutant cell lines. Calculate a synergy score (e.g., using Bliss or HSA models)."
         }
     ]
+    graph_data = {
+        'nodes': {'KRAS G12C': (2, 3), 'MAPK/ERK Pathway': (4, 3), 'Lung Cancer': (6, 4), 'Melanoma': (6, 3), 'CRC': (6, 2)},
+        'edges': [('KRAS G12C', 'MAPK/ERK Pathway')],
+        'annotations': [
+            {'source': 'MAPK/ERK Pathway', 'target': 'Lung Cancer', 'text': 'Resistance to Osimertinib'},
+            {'source': 'MAPK/ERK Pathway', 'target': 'Melanoma', 'text': 'Known Escape Pathway'},
+            {'source': 'KRAS G12C', 'target': 'CRC', 'text': 'Cologuard® Dx Link'}
+        ]
+    }
+    return hypotheses, graph_data
 
 def mock_patent_api(competitors: list):
-    """Simulates a call to a patent database API."""
+    """Simulates a call to a patent database API for PROTACs."""
     return [
-        {"id": "US-123", "owner": "Arvinas", "claim": "Claim 1: A compound having the structure A-L-B, wherein A is a protein degradation targeting moiety, L is a linker, and B is a Cereblon E3 ligase binding moiety."},
-        {"id": "US-456", "owner": "Kymera", "claim": "Claim 1: A hetero-bifunctional compound comprising a kinase-binding moiety and an E3 ligase binding moiety... wherein the E3 ligase is VHL."},
-        {"id": "US-789", "owner": "Novartis", "claim": "Claim 1: A compound for degrading BTK, comprising a BTK inhibitor scaffold... linked to a protein-targeting moiety."}
+        {"id": "US-10,123,456 B2", "owner": "Arvinas", "claim": "Claim 1: A bifunctional compound comprising a ubiquitin ligase binding moiety covalently linked to a protein target binding moiety, wherein the ubiquitin ligase is Cereblon."},
+        {"id": "US-11,234,567 B2", "owner": "Kymera Therapeutics", "claim": "Claim 1: A compound represented by the structure T-L-E, wherein T is a moiety that binds a target protein, L is a linker, and E is a moiety that binds to the VHL E3 ubiquitin ligase."},
+        {"id": "WO-2023-12345 A1", "owner": "Genentech", "claim": "Claim 1: A compound that effectuates the degradation of a target protein, wherein said compound comprises a moiety that binds a KRAS protein."}
     ]
 
 def analyze_fto(invention_desc: str):
-    """Simulates an LLM call to analyze Freedom to Operate."""
-    # This is a hard-coded simulation of the AI's analysis based on the user's example.
+    """Simulates an LLM call to analyze Freedom to Operate for a PROTAC, now with a novelty score."""
     return [
-        {'Aspect of Invention': 'Overall PROTAC Scaffold', 'Analysis & Comparison': "The general A-L-B scaffold is broadly claimed by many patents, including Arvinas (US-123). This structure itself is not novel.", 'Risk Level': 'High', 'Recommendation': 'Focus novelty claims on the specific components, not the general concept.'},
-        {'Aspect of Invention': 'Target Protein (BTK)', 'Analysis & Comparison': "The use of a PROTAC to degrade BTK is explicitly mentioned in Novartis's patent (US-789). Degrading this specific target is likely not novel.", 'Risk Level': 'High', 'Recommendation': 'Your BTK-binding moiety must be structurally distinct from those disclosed in prior art.'},
-        {'Aspect of Invention': 'E3 Ligase Binder (RNF114)', 'Analysis & Comparison': "Key Differentiator. The provided competitor patents explicitly claim Cereblon (Arvinas) and VHL (Kymera). The use of the novel RNF114 ligase appears to be unclaimed and highly novel.", 'Risk Level': 'Low', 'Recommendation': 'This is your strongest point of novelty. Emphasize this in any patent filing. This is your "white space."'},
-        {'Aspect of Invention': 'Linker (PEG, 5-8 units)', 'Analysis & Comparison': "Linker composition and length are often broadly claimed. While your specific linker may not be listed, it could fall under a general structural description.", 'Risk Level': 'Medium', 'Recommendation': 'Perform a detailed chemical structure search to ensure this exact linker class is not already claimed in combination with a BTK binder.'}
+        {'Aspect of Invention': 'General PROTAC Scaffold', 'Analysis': "Broadly claimed. Not novel.", 'Risk Level': 'High', 'Novelty Score': 1},
+        {'Aspect of Invention': 'Target Protein (BTK)', 'Analysis': "Targeting BTK for degradation is known.", 'Risk Level': 'High', 'Novelty Score': 2},
+        {'Aspect of Invention': 'E3 Ligase Binder (RNF114)', 'Analysis': "Novel ligase not claimed in key competitor IP.", 'Risk Level': 'Low', 'Novelty Score': 9},
+        {'Aspect of Invention': 'Linker (PEG, 5-8 units)', 'Analysis': "Specific length/composition may be novel but could be seen as obvious.", 'Risk Level': 'Medium', 'Novelty Score': 5}
     ]
 
 def mock_get_sop(sop_id: str):
-    """Simulates retrieving an SOP from a document control system."""
-    if sop_id == "WB-001":
-        return "Primary antibody incubation should be performed overnight at 4°C... Transfer should be performed using a wet tank transfer method for 90 minutes."
+    """Simulates retrieving an SOP from a document control system for an NGS workflow."""
+    if sop_id == "LIBPREP-OEX-003B":
+        return "Input DNA must be quantified via Qubit. Normalize all samples to 100ng total input... After ligation, perform a double-sided SPRI bead cleanup using a 0.55X ratio followed by a 0.85X ratio... Elute in 22 µL of elution buffer."
     return "SOP not found."
 
 def mock_get_reagent_info(lot_id: str):
-    """Simulates retrieving reagent lot information."""
-    if lot_id == "ABC-123":
-        return "Age: 18 months. Note from previous user (J. Doe): 'This lot began showing decreased signal and higher background after 12 months.'"
+    """Simulates retrieving reagent lot information for NGS kits."""
+    if lot_id == "LPK-23-9981":
+        return "Kit Age: 9 months. QC Note (J. Doe): 'This lot showed a trend of increased adapter-dimer formation compared to previous lots. Recommend using with KAPA Pure Beads instead of standard SPRI.'"
     return "Lot information not found."
 
 def mock_get_instrument_log(instrument_id: str):
-    """Simulates retrieving an instrument log."""
-    if instrument_id == "Blotter #2":
-        return "Last maintenance: 8 months ago. Status: Active. No errors reported."
+    """Simulates retrieving an instrument log for an NGS sequencer."""
+    if instrument_id == "NovaSeq-01":
+        return "Last PM: 2 months ago. Status: Active. Last 5 runs show average %Q30 > 92%. No errors reported."
     return "Instrument log not found."
 
 def troubleshoot_experiment(protocol: dict):
-    """Simulates an LLM call to troubleshoot a failed experiment."""
-    # This is a hard-coded simulation of the AI's analysis.
-    return [
-        {'Rank': 1, 'Most Likely Root Cause': 'Primary Antibody Incubation', 'Evidence': "Your protocol (1 hr at RT) deviates significantly from the official SOP (#WB-001), which specifies overnight at 4°C. Shorter incubations are a primary cause of weak signal.", 'Corrective Action': "Strictly follow the SOP. Re-run the experiment incubating the primary antibody overnight in the cold room."},
-        {'Rank': 2, 'Most Likely Root Cause': 'Reagent Quality (Antibody Lot)', 'Evidence': "The reagent log for Lot #ABC-123 contains a note from another scientist indicating poor performance and high background after 12 months. Your lot is 18 months old. This is a major red flag.", 'Corrective Action': 'Use a fresh, validated lot of the antibody. Order a new vial or find an alternate lot in the Reagent Hub.'},
-        {'Rank': 3, 'Most Likely Root Cause': 'Protein Transfer Inefficiency', 'Evidence': "Your use of a 30-minute semi-dry transfer deviates from the SOP's recommendation for a 90-minute wet transfer. For some proteins, especially larger ones, this can result in incomplete transfer and weak signal.", 'Corrective Action': "Switch to the wet tank transfer method as specified in the SOP for your next attempt."},
-        {'Rank': 4, 'Most Likely Root Cause': 'Instrument Performance (Unlikely)', 'Evidence': "The instrument log for Blotter #2 shows no reported errors, and it is active. While a malfunction is always possible, it is less likely than the protocol and reagent deviations noted above.", 'Corrective Action': 'No immediate action is needed. Re-evaluate only if the issues persist after correcting points 1-3.'}
+    """Simulates an LLM call to troubleshoot a failed experiment, returning structured data for visualization."""
+    report = [
+        {'Rank': 1, 'Most Likely Root Cause': 'Reagent Quality (Library Prep Kit)', 'Evidence': "Reagent Hub data for Lot #LPK-23-9981 explicitly notes a history of increased adapter-dimer formation. High adapter content is a direct cause of low usable reads and poor Q30 scores.", 'Corrective Action': "Immediately quarantine Lot #LPK-23-9981. Re-prep the failed libraries using a different, qualified lot (e.g., LPK-24-0112). Escalate to Supply Chain to investigate the suspect lot with the vendor."},
+        {'Rank': 2, 'Most Likely Root Cause': 'Sub-optimal DNA Input', 'Evidence': f"Your protocol used {protocol['DNA Input']}ng of DNA, which is a significant deviation from the SOP (LIBPREP-OEX-003B) that specifies 100ng. Low input can lead to low library complexity, high duplication rates, and poor quality scores.", 'Corrective Action': "Strictly adhere to the SOP for DNA input. If sample is limited, consult with an SME on low-input-specific protocols, which may require different reagent concentrations or cycle numbers."},
+        {'Rank': 3, 'Most Likely Root Cause': 'Bead Cleanup Ratio', 'Evidence': "Your protocol used a 'Standard SPRI' cleanup. The SOP specifies a 'double-sided' cleanup with specific ratios (0.55X / 0.85X) designed to remove small fragments like adapter-dimers. This deviation likely contributed to the high adapter content.", 'Corrective Action': "Follow the double-sided SPRI cleanup protocol exactly as written in the SOP for the next attempt."},
+        {'Rank': 4, 'Most Likely Root Cause': 'Sequencer Issue (Unlikely)', 'Evidence': "The instrument log for NovaSeq-01 shows excellent recent performance (Q30 > 92%) and no reported errors. While a sudden instrument failure is possible, it is far less likely than the multiple protocol and reagent deviations noted above.", 'Corrective Action': 'No action required for the instrument at this time. Focus on correcting the library preparation process first.'}
     ]
+    comparison_data = [
+        {'Parameter': 'DNA Input', 'User Protocol': f"{protocol['DNA Input']} ng", 'SOP Requirement': '100 ng', 'Deviation': protocol['DNA Input'] != 100},
+        {'Parameter': 'Bead Cleanup', 'User Protocol': protocol['Cleanup Method'], 'SOP Requirement': 'Double-sided SPRI', 'Deviation': protocol['Cleanup Method'] != 'Double-sided SPRI'},
+        {'Parameter': 'Reagent Lot', 'User Protocol': protocol['Library Kit Lot'], 'SOP Requirement': 'Use in-date, qualified lot', 'Deviation': True}
+    ]
+    return report, comparison_data
