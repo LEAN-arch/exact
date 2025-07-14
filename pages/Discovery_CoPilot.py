@@ -102,6 +102,19 @@ if submitted:
             st.markdown("#### Knowledge Graph")
             st.plotly_chart(_plot_hypothesis_graph(graph_data), use_container_width=True)
             
+            with st.expander("Synthesized Context (AI Input)"):
+                 st.info(f"""
+                **Internal Data:**
+                - **Compound:** {internal_data['Compound']}
+                - **Target:** {internal_data['Target']}
+                - **Activity:** {internal_data['Activity']}
+                """)
+                 st.warning(f"""
+                **External Data (Simulated):**
+                - **UniProt Function:** {uniprot_data.get('Function', 'N/A')}
+                - **PubMed Hit 1:** {pubmed_data[0]}
+                """)
+                 
         with col2:
             st.markdown("#### Proposed Research Avenues")
             st.dataframe(pd.DataFrame(hypotheses), hide_index=True, use_container_width=True)
