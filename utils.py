@@ -15,10 +15,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, PolynomialFeatures, StandardScaler
 from sklearn.linear_model import LinearRegression
-# --- FIX: Removed unused TensorFlow imports that were causing a fatal error ---
-# import tensorflow as tf
-# from tensorflow.keras import layers
-# --- END OF FIX ---
 
 # --- Custom Plotly Template for Exact Sciences ---
 exact_sciences_template = {
@@ -37,7 +33,6 @@ pio.templates["exact_sciences"] = exact_sciences_template
 pio.templates.default = "exact_sciences"
 
 # === CORE DATA GENERATION (Adapted for Exact Sciences) ===
-# ... (All functions from generate_project_data to train_rca_model remain unchanged) ...
 def generate_project_data():
     """Generates project data specific to Exact Sciences' product pipeline and transfer activities."""
     data = {
@@ -242,12 +237,6 @@ def train_rca_model(df):
     model.fit(X, y)
     return model, X, y
 
-# --- FIX: Removed unused TensorFlow-dependent functions ---
-# def generate_golden_batch_data(): ...
-# def generate_live_qc_data(): ...
-# def train_autoencoder_model(): ...
-# --- END OF FIX ---
-
 def generate_traceability_data():
     """Generates traceability data for an Oncotype DX® QC software validation."""
     return {
@@ -335,3 +324,98 @@ def generate_capa_source_data():
         'Source': ['Test Method OOS', 'Internal Audit', 'Bioinformatics Anomaly', 'Supplier Non-conformance', 'Customer Complaint (Clinical)', 'Process Trend'],
         'Count': [12, 7, 5, 3, 2, 1]
     }).sort_values('Count', ascending=False)
+
+# ==============================================================================
+# --- NEW FUNCTIONS FOR AI-DRIVEN FEATURES (EXPERT INTEGRATION) ---
+# ==============================================================================
+
+def mock_uniprot_api(target_id: str):
+    """Simulates a call to the UniProt API to get protein information."""
+    if target_id == "P12345":
+        return {
+            "Function": "Involved in the regulation of the MAP Kinase signaling pathway.",
+            "Subcellular Location": "Cytoplasm, Nucleus.",
+            "Pathway Association": "ERK1/ERK2 Cascade."
+        }
+    return {}
+
+def mock_pubmed_api(query: str):
+    """Simulates a call to the PubMed API to get recent publication titles."""
+    if "Target Kinase Z" in query:
+        return [
+            "Upregulation of the ERK1/ERK2 Cascade Confers Resistance to Osimertinib in Lung Adenocarcinoma.",
+            "Target Kinase Z as a Novel Escape Pathway in BRAF-mutant Melanoma.",
+            "Synthetic Lethality between PARP inhibitors and MAP Kinase pathway activation."
+        ]
+    return []
+
+def generate_hypothesis(internal_data: dict, external_data: dict):
+    """Simulates an LLM call to generate therapeutic hypotheses."""
+    # In a real application, this would construct a prompt and call a generative AI model.
+    # Here, we return a hard-coded response matching the user's example for demonstration.
+    return [
+        {
+            "#": 1,
+            "Therapeutic Hypothesis": "Overcoming Acquired Resistance in Lung Cancer",
+            "Scientific Rationale": "The literature shows that the pathway our target belongs to (ERK1/ERK2) is a known resistance mechanism to existing lung cancer therapies like Osimertinib. Inhibiting Target Kinase Z with Cmpd-42 could re-sensitize resistant tumors.",
+            "Suggested \"Next Experiment\"": "Test Cmpd-42 in combination with Osimertinib on an Osimertinib-resistant lung adenocarcinoma cell line (e.g., H1975-OR). Look for synergistic cell killing."
+        },
+        {
+            "#": 2,
+            "Therapeutic Hypothesis": "Targeting Intrinsic Resistance in Melanoma",
+            "Scientific Rationale": "A recent paper explicitly identifies our target as an escape pathway in BRAF-mutant melanoma. This suggests that Cmpd-42 could be effective as a monotherapy or combination therapy in this specific patient population.",
+            "Suggested \"Next Experiment\"": "Screen Cmpd-42 against a panel of BRAF-mutant melanoma cell lines (e.g., A375). Assess for cell viability and inhibition of downstream pathway markers."
+        },
+        {
+            "#": 3,
+            "Therapeutic Hypothesis": "Synthetic Lethality with PARP Inhibitors",
+            "Scientific Rationale": "There is an emerging link between our target's pathway and synthetic lethality with PARP inhibitors. Combining Cmpd-42 with a PARP inhibitor (like Olaparib) could be a powerful new therapy, potentially in ovarian or breast cancer.",
+            "Suggested \"Next Experiment\"": "Perform a combination matrix study with Cmpd-42 and Olaparib on a BRCA-mutant ovarian cancer cell line (e.g., OVCAR-3). Calculate a synergy score."
+        }
+    ]
+
+def mock_patent_api(competitors: list):
+    """Simulates a call to a patent database API."""
+    return [
+        {"id": "US-123", "owner": "Arvinas", "claim": "Claim 1: A compound having the structure A-L-B, wherein A is a protein degradation targeting moiety, L is a linker, and B is a Cereblon E3 ligase binding moiety."},
+        {"id": "US-456", "owner": "Kymera", "claim": "Claim 1: A hetero-bifunctional compound comprising a kinase-binding moiety and an E3 ligase binding moiety... wherein the E3 ligase is VHL."},
+        {"id": "US-789", "owner": "Novartis", "claim": "Claim 1: A compound for degrading BTK, comprising a BTK inhibitor scaffold... linked to a protein-targeting moiety."}
+    ]
+
+def analyze_fto(invention_desc: str):
+    """Simulates an LLM call to analyze Freedom to Operate."""
+    # This is a hard-coded simulation of the AI's analysis based on the user's example.
+    return [
+        {'Aspect of Invention': 'Overall PROTAC Scaffold', 'Analysis & Comparison': "The general A-L-B scaffold is broadly claimed by many patents, including Arvinas (US-123). This structure itself is not novel.", 'Risk Level': 'High', 'Recommendation': 'Focus novelty claims on the specific components, not the general concept.'},
+        {'Aspect of Invention': 'Target Protein (BTK)', 'Analysis & Comparison': "The use of a PROTAC to degrade BTK is explicitly mentioned in Novartis's patent (US-789). Degrading this specific target is likely not novel.", 'Risk Level': 'High', 'Recommendation': 'Your BTK-binding moiety must be structurally distinct from those disclosed in prior art.'},
+        {'Aspect of Invention': 'E3 Ligase Binder (RNF114)', 'Analysis & Comparison': "Key Differentiator. The provided competitor patents explicitly claim Cereblon (Arvinas) and VHL (Kymera). The use of the novel RNF114 ligase appears to be unclaimed and highly novel.", 'Risk Level': 'Low', 'Recommendation': 'This is your strongest point of novelty. Emphasize this in any patent filing. This is your "white space."'},
+        {'Aspect of Invention': 'Linker (PEG, 5-8 units)', 'Analysis & Comparison': "Linker composition and length are often broadly claimed. While your specific linker may not be listed, it could fall under a general structural description.", 'Risk Level': 'Medium', 'Recommendation': 'Perform a detailed chemical structure search to ensure this exact linker class is not already claimed in combination with a BTK binder.'}
+    ]
+
+def mock_get_sop(sop_id: str):
+    """Simulates retrieving an SOP from a document control system."""
+    if sop_id == "WB-001":
+        return "Primary antibody incubation should be performed overnight at 4°C... Transfer should be performed using a wet tank transfer method for 90 minutes."
+    return "SOP not found."
+
+def mock_get_reagent_info(lot_id: str):
+    """Simulates retrieving reagent lot information."""
+    if lot_id == "ABC-123":
+        return "Age: 18 months. Note from previous user (J. Doe): 'This lot began showing decreased signal and higher background after 12 months.'"
+    return "Lot information not found."
+
+def mock_get_instrument_log(instrument_id: str):
+    """Simulates retrieving an instrument log."""
+    if instrument_id == "Blotter #2":
+        return "Last maintenance: 8 months ago. Status: Active. No errors reported."
+    return "Instrument log not found."
+
+def troubleshoot_experiment(protocol: dict):
+    """Simulates an LLM call to troubleshoot a failed experiment."""
+    # This is a hard-coded simulation of the AI's analysis.
+    return [
+        {'Rank': 1, 'Most Likely Root Cause': 'Primary Antibody Incubation', 'Evidence': "Your protocol (1 hr at RT) deviates significantly from the official SOP (#WB-001), which specifies overnight at 4°C. Shorter incubations are a primary cause of weak signal.", 'Corrective Action': "Strictly follow the SOP. Re-run the experiment incubating the primary antibody overnight in the cold room."},
+        {'Rank': 2, 'Most Likely Root Cause': 'Reagent Quality (Antibody Lot)', 'Evidence': "The reagent log for Lot #ABC-123 contains a note from another scientist indicating poor performance and high background after 12 months. Your lot is 18 months old. This is a major red flag.", 'Corrective Action': 'Use a fresh, validated lot of the antibody. Order a new vial or find an alternate lot in the Reagent Hub.'},
+        {'Rank': 3, 'Most Likely Root Cause': 'Protein Transfer Inefficiency', 'Evidence': "Your use of a 30-minute semi-dry transfer deviates from the SOP's recommendation for a 90-minute wet transfer. For some proteins, especially larger ones, this can result in incomplete transfer and weak signal.", 'Corrective Action': "Switch to the wet tank transfer method as specified in the SOP for your next attempt."},
+        {'Rank': 4, 'Most Likely Root Cause': 'Instrument Performance (Unlikely)', 'Evidence': "The instrument log for Blotter #2 shows no reported errors, and it is active. While a malfunction is always possible, it is less likely than the protocol and reagent deviations noted above.", 'Corrective Action': 'No immediate action is needed. Re-evaluate only if the issues persist after correcting points 1-3.'}
+    ]
