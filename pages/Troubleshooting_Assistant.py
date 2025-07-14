@@ -66,7 +66,7 @@ if submitted:
                 st.metric(f"Rank #{item['Rank']}: {item['Most Likely Root Cause']}", "")
                 st.markdown(f"**Evidence:** {item['Evidence']}")
                 st.success(f"**Recommended Corrective Action:** {item['Corrective Action']}")
-        
+
         with st.expander("🔬 **Methodology & Significance**"):
             st.markdown("""
             #### Methodology: Differential Diagnosis via Data Integration
