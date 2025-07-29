@@ -231,11 +231,22 @@ def generate_rca_data():
     return df
 
 def train_rca_model(df):
-    """Trains a RandomForest model for Cologuard® Root Cause Analysis."""
-    X = df.drop('Root Cause', axis=1); y = df['Root Cause']
+    """
+    Trains a RandomForest model for Cologuard® Root Cause Analysis.
+    CORRECTED: Now handles categorical features using one-hot encoding.
+    """
+    X = df.drop('Root Cause', axis=1)
+    y = df['Root Cause']
+
+    # Identify categorical columns and one-hot encode them
+    categorical_cols = ['Operator ID', 'Instrument ID']
+    X_encoded = pd.get_dummies(X, columns=categorical_cols, prefix=categorical_cols)
+
     model = RandomForestClassifier(n_estimators=100, max_depth=7, random_state=42, class_weight='balanced')
-    model.fit(X, y)
-    return model, X, y
+    model.fit(X_encoded, y)
+
+    # Return the model and the columns of the encoded data, which are needed for prediction
+    return model, X_encoded.columns, y
 
 def generate_traceability_data():
     """Generates traceability data for an Oncotype DX® QC software validation."""
