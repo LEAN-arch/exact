@@ -34,7 +34,7 @@ instrument_df = generate_instrument_health_data()
 instrument_model, X_inst = train_instrument_model(instrument_df)
 
 rca_df = generate_rca_data()
-rca_model, X_rca, y_rca = train_rca_model(rca_df)
+rca_model, rca_encoded_columns, y_rca = train_rca_model(rca_df)
 
 
 # --- Page Tabs based on NGS QC Tiers ---
@@ -114,11 +114,26 @@ with tab2:
         inst_id = st.selectbox("Instrument ID", rca_df['Instrument ID'].unique())
         reagent_age = st.slider("Reagent Lot Age (days)", 1, 150, 95)
         if st.button("Predict Root Cause"):
-            input_df = pd.DataFrame([[reagent_age, op_id, inst_id]], columns=['Reagent Lot Age (days)', 'Operator ID', 'Instrument ID'])
-            prediction = rca_model.predict(input_df)[0]
-            pred_proba = rca_model.predict_proba(input_df)
+            # CORRECTED: The prediction input must be encoded in the exact same way as the training data.
+            input_data = {
+                'Reagent Lot Age (days)': [reagent_age],
+                'Operator ID': [op_id],
+                'Instrument ID': [inst_id]
+            }
+            input_df = pd.DataFrame(input_data)
+
+            # One-hot encode the input using the same logic as training
+            input_encoded = pd.get_dummies(input_df, columns=['Operator ID', 'Instrument ID'], prefix=['Operator ID', 'Instrument ID'])
+
+            # Align columns with the training data: add missing columns and fill with 0
+            input_aligned = input_encoded.reindex(columns=rca_encoded_columns, fill_value=0)
+
+            # Now predict with the correctly formatted data
+            prediction = rca_model.predict(input_aligned)[0]
+            pred_proba = rca_model.predict_proba(input_aligned)
+
             st.success(f"**Most Likely Cause:** {prediction}")
-            
+
             # Display probabilities
             proba_df = pd.DataFrame(pred_proba, columns=rca_model.classes_).T.reset_index()
             proba_df.columns = ['Cause', 'Probability']
