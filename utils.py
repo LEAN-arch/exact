@@ -328,7 +328,45 @@ def generate_capa_source_data():
 # ==============================================================================
 # --- NEW FUNCTIONS FOR AI-DRIVEN FEATURES (EXPERT INTEGRATION) ---
 # ==============================================================================
+# In utils.py
 
+# ... (other functions)
+
+def analyze_fto(invention_desc: str):
+    """Simulates an LLM call to analyze Freedom to Operate for a PROTAC, now with a novelty score."""
+    # CORRECTED: Added a 'Recommendation' key to each dictionary to match the UI's expectation.
+    return [
+        {
+            'Aspect of Invention': 'General PROTAC Scaffold',
+            'Analysis': "Broadly claimed. Not novel.",
+            'Risk Level': 'High',
+            'Novelty Score': 1,
+            'Recommendation': 'Requires detailed legal review. Avoid broad claims in patent application.'
+        },
+        {
+            'Aspect of Invention': 'Target Protein (BTK)',
+            'Analysis': "Targeting BTK for degradation is known.",
+            'Risk Level': 'High',
+            'Novelty Score': 2,
+            'Recommendation': 'Ensure specific BTK binder moiety is not covered by existing chemical matter patents.'
+        },
+        {
+            'Aspect of Invention': 'E3 Ligase Binder (RNF114)',
+            'Analysis': "Novel ligase not claimed in key competitor IP.",
+            'Risk Level': 'Low',
+            'Novelty Score': 9,
+            'Recommendation': 'Focus patent strategy here. This is the core inventive step. Generate extensive data.'
+        },
+        {
+            'Aspect of Invention': 'Linker (PEG, 5-8 units)',
+            'Analysis': "Specific length/composition may be novel but could be seen as obvious.",
+            'Risk Level': 'Medium',
+            'Novelty Score': 5,
+            'Recommendation': 'Characterize if this specific linker composition provides unexpected advantages (e.g., stability, PK).'
+        }
+    ]
+
+# ... (other functions)
 def mock_uniprot_api(target_id: str):
     """Simulates a call to the UniProt API to get protein information."""
     if target_id == "P01116":  # UniProt ID for KRAS
