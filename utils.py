@@ -339,9 +339,7 @@ def generate_capa_source_data():
 # ==============================================================================
 # --- NEW FUNCTIONS FOR AI-DRIVEN FEATURES (EXPERT INTEGRATION) ---
 # ==============================================================================
-# In utils.py
-
-# ... (other functions)
+# In utils.py, find and replace the entire analyze_fto function:
 
 def analyze_fto(invention_desc: str):
     """Simulates an LLM call to analyze Freedom to Operate for a PROTAC, now with a novelty score."""
