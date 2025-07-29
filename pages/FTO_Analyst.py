@@ -80,7 +80,8 @@ if st.button("Analyze FTO Landscape"):
                 """)
 
             with st.expander("Detailed Analysis & Recommendations"):
-                st.dataframe(fto_df[['Aspect of Invention', 'Analysis', 'Recommendation']], hide_index=True, use_container_width=True)
+                # CORRECTED LINE: Removed the non-existent 'Recommendation' column.
+                st.dataframe(fto_df[['Aspect of Invention', 'Analysis']], hide_index=True, use_container_width=True)
             
             with st.expander("Cited Prior Art (Simulated)"):
                  st.dataframe(pd.DataFrame(competitor_patents), hide_index=True, use_container_width=True)
